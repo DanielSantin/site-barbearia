@@ -8,270 +8,267 @@ const createDefaultTimeSlots = () => {
   const timeSlots = [];
   for (let hour = 13; hour <= 18; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, booked: false, userId: null });
+      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
     }
   }
   return timeSlots;
 };
 
-// Função para verificar se um horário já passou
-const isTimeSlotPassed = (date, timeSlot) => {
-  const now = new Date();
-  const currentDate = now.toISOString().split("T")[0];
-  
-  if (date < currentDate) return true;
-  if (date > currentDate) return false;
-  
-  // Se for o dia atual, verifica se o horário já passou
-  const [hour, minute] = timeSlot.time.split(':').map(Number);
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
-  
-  return (currentHour > hour || (currentHour === hour && currentMinute >= minute));
+const isWeekend = (date: string | number | Date) => {
+  const dayOfWeek = new Date(date).getDay();
+  return dayOfWeek === 6 || dayOfWeek === 5; // 0 = Domingo, 6 = Sábado
 };
 
-// Busca os horários disponíveis para os próximos 5 dias
-export async function GET(req: Request) {
-  try {
-    // Verificar se é uma solicitação para reservas do usuário
-    const { searchParams } = new URL(req.url);
-    const userReservations = searchParams.get("userReservations");
 
-    const client = await clientPromise;
-    const db = client.db();
-    const schedulesCollection = db.collection("schedules");
-    
-    // Obter a data atual no formato YYYY-MM-DD
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-    
-    // Se estiver buscando as reservas do usuário
-    if (userReservations === "true") {
-      const session = await getServerSession(authOptions);
-      if (!session || !session.user) {
-        return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
-      }
-      
-      const userId = session.user.id;
-      
-      // Busca apenas as reservas do usuário a partir da data atual
-      const allUserReservations = await schedulesCollection.find({
-        "timeSlots.userId": userId,
-        date: { $gte: currentDate } // Apenas datas a partir de hoje
-      }).toArray();
-      
-      // Filtra para incluir apenas reservas futuras
-      const filteredReservations = allUserReservations.map(schedule => {
-        const filteredTimeSlots = schedule.timeSlots.filter(slot => 
-          slot.userId === userId && !isTimeSlotPassed(schedule.date, slot)
-        );
-        
-        if (filteredTimeSlots.length === 0) {
-          return null; // Ignora este agendamento se não tiver slots válidos
-        }
-        
-        return {
-          ...schedule,
-          timeSlots: filteredTimeSlots // Importante: retorna apenas os slots filtrados
-        };
-      }).filter(Boolean); // Remove os valores null
-      
-      return NextResponse.json(filteredReservations);
+function isTimeSlotPassed(date: string, timeSlot: any): boolean {
+  // Verificar se o slot e o horário existem
+  if (!timeSlot || !timeSlot.time) {
+    return false;
+  }
+  
+  const now = new Date();
+  const [hours, minutes] = timeSlot.time.split(':').map(Number);
+  const [year, month, day] = date.split('-').map(Number);
+
+  const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+  return now > slotDate;
+}
+
+// Busca os horários disponíveis para os próximos 5 dias
+export async function GET(req: Request) { 
+  try { 
+    const { searchParams } = new URL(req.url); 
+    const selectedDate = searchParams.get("date"); 
+ 
+    if (!selectedDate) { 
+      return NextResponse.json({ error: "Data não fornecida" }, { status: 400 }); 
+    } 
+
+    console.log(isWeekend(selectedDate))
+    if (isWeekend(selectedDate)) {
+      return NextResponse.json([]); 
     }
     
-    // Caso contrário, retorna todos os horários disponíveis para os próximos dias
-    
-    // Gera os próximos 5 dias a partir de hoje, garantindo que começamos do dia atual
-    const dates = [];
-    for (let i = 0; i < 5; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() + i);
-      // Formata a data como YYYY-MM-DD
-      const formattedDate = date.toISOString().split("T")[0];
-      dates.push(formattedDate);
-    }
-    
-    // Busca os horários para as datas especificadas
-    const schedules = await schedulesCollection.find({ date: { $in: dates } }).toArray();
-    
-    // Se não encontrar algum dia, cria com horários padrão
-    for (const date of dates) {
-      if (!schedules.some((schedule) => schedule.date === date)) {
-        await schedulesCollection.updateOne(
-          { date },
-          { $set: { date, timeSlots: createDefaultTimeSlots() } },
-          { upsert: true }
-        );
+ 
+    const client = await clientPromise; 
+    const db = client.db(); 
+    const schedulesCollection = db.collection("schedules"); 
+ 
+    let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
+ 
+    if (schedules.length === 0) { 
+      // Não existe agendamento para esta data, criar um novo
+      await schedulesCollection.updateOne( 
+        { date: selectedDate }, 
+        { $set: { date: selectedDate, timeSlots: createDefaultTimeSlots() } }, 
+        { upsert: true } 
+      ); 
+      schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
+    } else {
+      // Verificar se os slots existentes têm a propriedade "time"
+      const hasInvalidTimeSlots = schedules.some(schedule => 
+        schedule.timeSlots.some(slot => !slot.time)
+      );
+      
+
+      // Se encontrou slots sem propriedade "time", recria os slots
+      if (hasInvalidTimeSlots) {
+        await Promise.all(schedules.map(schedule => 
+          schedulesCollection.updateOne(
+            { date: schedule.date },
+            { $set: { timeSlots: createDefaultTimeSlots() } }
+          )
+        ));
+        
+        // Busca os dados atualizados
+        schedules = await schedulesCollection.find({ date: selectedDate }).toArray();
       }
     }
-    
-    // Busca os agendamentos atualizados
-    const updatedSchedules = await schedulesCollection.find({ date: { $in: dates } }).toArray();
-    
-    // Marca horários passados como reservados para não aparecerem como disponíveis
-    const processedSchedules = updatedSchedules.map(schedule => {
-      const processedTimeSlots = schedule.timeSlots.map(slot => {
-        // Se o horário já passou, marca como reservado
-        if (isTimeSlotPassed(schedule.date, slot)) {
-          return { ...slot, booked: true, userId: "EXPIRED" };
+
+    // Marcar horários passados como indisponíveis
+    schedules = schedules.map(schedule => {
+      const updatedTimeSlots = schedule.timeSlots.map(slot => {
+        // Usar a função existente para verificar se o horário já passou
+        if (isTimeSlotPassed(selectedDate, slot)) {
+          return {
+            ...slot,
+            booked: true,
+            isPast: true // Adicionando flag para identificar que é um horário passado
+          };
         }
+        
         return slot;
       });
       
-      return { ...schedule, timeSlots: processedTimeSlots };
+      return {
+        ...schedule,
+        timeSlots: updatedTimeSlots
+      };
     });
-    
-    // Atualiza no banco para manter consistência (opcional)
-    for (const schedule of processedSchedules) {
-      await schedulesCollection.updateOne(
-        { date: schedule.date },
-        { $set: { timeSlots: schedule.timeSlots } }
-      );
-    }
-    
-    return NextResponse.json(processedSchedules);
-  } catch (error) {
-    console.error("Erro na API GET schedules:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
-  }
+ 
+    // Retorna os schedules com os horários passados marcados como indisponíveis
+    return NextResponse.json(schedules); 
+  } catch (error) { 
+    console.error("Erro na API GET schedules:", error); 
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 }); 
+  } 
 }
+
+
 
 // Reserva um horário
 export async function POST(req: Request) {
   try {
+    // Verificar autenticação
     const session = await getServerSession(authOptions);
-    
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+      return NextResponse.json({ error: "Usuário não autenticado" }, { status: 401 });
     }
 
-    const { date, time } = await req.json();
-    const userId = session.user.id;
-    
-    if (!userId) {
-      return NextResponse.json({ error: "ID do usuário não encontrado na sessão" }, { status: 400 });
+    const { date, timeSlotIndex, service } = await req.json();
+
+    if (!date || timeSlotIndex === undefined) {
+      return NextResponse.json({ error: "Dados de reserva incompletos" }, { status: 400 });
     }
-    
-    // Verifica se o horário já passou
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-    
-    // Verifica se a data é anterior à data atual
-    if (date < currentDate) {
-      return NextResponse.json({ error: "Não é possível reservar datas passadas" }, { status: 400 });
-    }
-    
-    // Se for a data atual, verifica se o horário já passou
-    if (date === currentDate) {
-      const [timeHour, timeMinute] = time.split(':').map(Number);
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      
-      if (timeHour < currentHour || (timeHour === currentHour && timeMinute <= currentMinute)) {
-        return NextResponse.json({ error: "Não é possível reservar horários passados" }, { status: 400 });
-      }
-    }
-    
+
     const client = await clientPromise;
     const db = client.db();
     const schedulesCollection = db.collection("schedules");
-
-    // Verifica se o horário já está reservado
-    const existingSchedule = await schedulesCollection.findOne({
-      date,
-      timeSlots: {
-        $elemMatch: {
-          time: time,
-          booked: true
-        }
-      }
-    });
     
-    if (existingSchedule) {
-      return NextResponse.json({ error: "Este horário já está reservado" }, { status: 400 });
+    // Buscar agendamento para verificar disponibilidade
+    const schedule = await schedulesCollection.findOne({ date });
+    
+    if (!schedule) {
+      return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 });
     }
-
-    // Verifica quantas reservas ativas o usuário já tem
-    const userReservations = await schedulesCollection.find({ 
-      "timeSlots.userId": userId,
-      date: { $gte: currentDate }  // Apenas datas a partir de hoje
-    }).toArray();
     
-    const activeReservations = userReservations.flatMap(sch => 
-      sch.timeSlots.filter(slot => 
-        slot.userId === userId && !isTimeSlotPassed(sch.date, slot)
-      )
-    );
-    
-    if (activeReservations.length >= 2) {
-      return NextResponse.json({ error: "Máximo de 2 reservas ativas permitido" }, { status: 400 });
-    }
-
-    const result = await schedulesCollection.updateOne(
-      { date, "timeSlots.time": time, "timeSlots.booked": false },
-      { $set: { "timeSlots.$.booked": true, "timeSlots.$.userId": userId } }
-    );
-
-    if (result.matchedCount === 0) {
+    // Verificar se o horário está disponível
+    if (!schedule.timeSlots[timeSlotIndex] || schedule.timeSlots[timeSlotIndex].booked) {
       return NextResponse.json({ error: "Horário não disponível" }, { status: 400 });
     }
-
-    console.log("Horário reservado com sucesso:", { date, time, userId });
-    return NextResponse.json({ message: "Horário reservado com sucesso" }, { status: 200 });
+    
+    // Atualizar o horário como reservado
+    const updatedTimeSlots = [...schedule.timeSlots];
+    updatedTimeSlots[timeSlotIndex] = {
+      ...updatedTimeSlots[timeSlotIndex],
+      booked: true,
+      userId: session.user.id,
+      userName: session.user.name || "Usuário",
+      service: service || "Não especificado",
+      bookedAt: new Date().toISOString()
+    };
+    
+    // Atualizar no banco de dados
+    await schedulesCollection.updateOne(
+      { date },
+      { $set: { timeSlots: updatedTimeSlots } }
+    );
+    
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erro na API POST schedules:", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
   }
 }
 
+
 // Cancela uma reserva
 export async function DELETE(req: Request) {
   try {
+    // Obter a sessão do usuário autenticado
     const session = await getServerSession(authOptions);
+    
+    // Verificar se o usuário está autenticado
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+      return NextResponse.json({ 
+        error: "Não autorizado. Faça login para continuar." 
+      }, { status: 401 });
     }
     
-    const { date, time } = await req.json();
     const userId = session.user.id;
     
-    // Obter a data atual no formato YYYY-MM-DD
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-    
-    // Verifica se a data é anterior à data atual
-    if (date < currentDate) {
-      return NextResponse.json({ error: "Não é possível cancelar reservas de datas passadas" }, { status: 400 });
+    // Extrair dados da URL
+    const { searchParams } = new URL(req.url);
+    const date = searchParams.get("date");
+    const timeSlotIndex = searchParams.get("timeSlotIndex");
+
+    // Validações básicas
+    if (!date || !timeSlotIndex) {
+      return NextResponse.json({ 
+        error: "Dados incompletos. Forneça date e timeSlotIndex como parâmetros de consulta" 
+      }, { status: 400 });
     }
-    
-    // Se for a data atual, verifica se o horário já passou
-    if (date === currentDate) {
-      const [hour, minute] = time.split(':').map(Number);
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      
-      if (currentHour > hour || (currentHour === hour && currentMinute >= minute)) {
-        return NextResponse.json({ error: "Não é possível cancelar reservas de horários passados" }, { status: 400 });
-      }
+
+    const timeSlotIndexNumber = parseInt(timeSlotIndex, 10);
+    if (isNaN(timeSlotIndexNumber)) {
+      return NextResponse.json({ 
+        error: "timeSlotIndex deve ser um número" 
+      }, { status: 400 });
     }
-    
+
     const client = await clientPromise;
     const db = client.db();
     const schedulesCollection = db.collection("schedules");
 
-    const result = await schedulesCollection.updateOne(
-      { date, "timeSlots.time": time, "timeSlots.userId": userId },
-      { $set: { "timeSlots.$.booked": false, "timeSlots.$.userId": null } }
-    );
-
-    if (result.matchedCount === 0) {
-      return NextResponse.json({ error: "Reserva não encontrada" }, { status: 404 });
+    // Buscar o agendamento
+    const schedule = await schedulesCollection.findOne({ date });
+    
+    if (!schedule) {
+      return NextResponse.json({ 
+        error: "Data não encontrada" 
+      }, { status: 404 });
     }
 
-    console.log("Reserva cancelada com sucesso:", { date, time, userId });
-    return NextResponse.json({ message: "Reserva cancelada com sucesso" }, { status: 200 });
+    // Verificar se o índice do timeSlot é válido
+    if (timeSlotIndexNumber < 0 || timeSlotIndexNumber >= schedule.timeSlots.length) {
+      return NextResponse.json({ 
+        error: "Índice de horário inválido" 
+      }, { status: 400 });
+    }
+
+    // Verificar se o horário está reservado
+    const targetTimeSlot = schedule.timeSlots[timeSlotIndexNumber];
+    if (!targetTimeSlot.booked) {
+      return NextResponse.json({ 
+        error: "Este horário não está reservado" 
+      }, { status: 400 });
+    }
+
+    // Verificar se o usuário é o proprietário da reserva
+    if (targetTimeSlot.userId !== userId) {
+      return NextResponse.json({ 
+        error: "Você só pode cancelar suas próprias reservas" 
+      }, { status: 403 });  // Forbidden
+    }
+
+    // Tudo verificado, cancelar a reserva
+    await schedulesCollection.updateOne(
+      { date },
+      { 
+        $set: { 
+          [`timeSlots.${timeSlotIndexNumber}.booked`]: false,
+          [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.bookedAt`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.canceledAt`]: new Date()
+        } 
+      }
+    );
+
+    // Buscar dados atualizados
+    const updatedSchedule = await schedulesCollection.findOne({ date });
+    
+    return NextResponse.json({
+      success: true,
+      message: "Reserva cancelada com sucesso",
+      schedule: updatedSchedule
+    });
+    
   } catch (error) {
     console.error("Erro na API DELETE schedules:", error);
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Erro interno do servidor" 
+    }, { status: 500 });
   }
 }

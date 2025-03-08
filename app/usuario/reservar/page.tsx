@@ -13,11 +13,10 @@ export default function ReservarHorario() {
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   useEffect(() => {
-    console.log("useEffect está sendo chamado");
     async function fetchHorarios() {
       try {
         setLoading(true);
-        const response = await axios.get("/api/schedules");
+        const response = await axios.get("/api/schedules?date=${date}");
         setHorarios(response.data);
         setLoading(false);
       } catch (error) {

@@ -10,7 +10,6 @@ import { AuthCard } from "@/components/auth/AuthCard";
 
 export default async function AuthPage() {
   const session = await getServerSession(authOptions);
-
   //If there is a session the user is redirected to /
   if (session) {
     redirect("/");
