@@ -78,7 +78,7 @@ export default function Home() {
       toast.error("Você precisa estar logado para fazer uma reserva.");
       return;
     }
-  
+    
     setIsLoading(true);
     try {
       if (selectedOption === "Cabelo e Barba") {
@@ -142,7 +142,6 @@ export default function Home() {
         });
   
         const data = await response.json();
-        
         if (!response.ok) {
           throw new Error(data.error || "Erro ao reservar horário");
         }

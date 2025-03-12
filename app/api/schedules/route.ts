@@ -2,11 +2,17 @@ import clientPromise from "../../../lib/utils/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
+const { ObjectId } = require("mongodb");
 
 // Função para criar horários padrão entre 13:00 e 18:00
 const createDefaultTimeSlots = () => {
   const timeSlots = [];
-  for (let hour = 13; hour <= 18; hour++) {
+  for (let hour = 10; hour <= 11; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
+    }
+  }
+  for (let hour = 13; hour <= 19; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
       timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
     }
@@ -38,23 +44,35 @@ function isTimeSlotPassed(date: string, timeSlot: any): boolean {
 // Busca os horários disponíveis para os próximos 5 dias
 export async function GET(req: Request) { 
   try { 
+
+    const client = await clientPromise; 
+    const db = client.db(); 
+    const dbAuth = client.db("auth")
+
+    const schedulesCollection = db.collection("schedules");
+
+    const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url); 
     const selectedDate = searchParams.get("date"); 
- 
+
+    if (session){
+      const userId = session.user?.id;
+      const userCollection = dbAuth.collection("users");
+      const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+      let isAdmin = false;
+      if (user?.isAdmin == true){
+        isAdmin = true;
+      }
+    }
+
     if (!selectedDate) { 
       return NextResponse.json({ error: "Data não fornecida" }, { status: 400 }); 
     } 
 
-    console.log(isWeekend(selectedDate))
     if (isWeekend(selectedDate)) {
       return NextResponse.json([]); 
     }
-    
- 
-    const client = await clientPromise; 
-    const db = client.db(); 
-    const schedulesCollection = db.collection("schedules"); 
- 
+
     let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
  
     if (schedules.length === 0) { 
@@ -85,7 +103,7 @@ export async function GET(req: Request) {
         schedules = await schedulesCollection.find({ date: selectedDate }).toArray();
       }
     }
-
+    
     // Marcar horários passados como indisponíveis
     schedules = schedules.map(schedule => {
       const updatedTimeSlots = schedule.timeSlots.map(slot => {
@@ -106,7 +124,7 @@ export async function GET(req: Request) {
         timeSlots: updatedTimeSlots
       };
     });
- 
+    
     // Retorna os schedules com os horários passados marcados como indisponíveis
     return NextResponse.json(schedules); 
   } catch (error) { 
@@ -114,8 +132,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 }); 
   } 
 }
-
-
 
 // Reserva um horário
 export async function POST(req: Request) {
@@ -146,6 +162,34 @@ export async function POST(req: Request) {
     // Verificar se o horário está disponível
     if (!schedule.timeSlots[timeSlotIndex] || schedule.timeSlots[timeSlotIndex].booked) {
       return NextResponse.json({ error: "Horário não disponível" }, { status: 400 });
+    }
+
+    // Verificar o número de reservas futuras do usuário
+    const allSchedules = await schedulesCollection.find().toArray();
+    
+    let futureBookingsCount = 0;
+    
+    for (const sched of allSchedules) {
+      if (sched.timeSlots) {
+        for (const slot of sched.timeSlots) {
+          // Conta apenas slots reservados pelo usuário atual e que não passaram
+          if (
+            slot.booked && 
+            slot.userId === session.user.id && 
+            !isTimeSlotPassed(sched.date, slot)
+          ) {
+            futureBookingsCount++;
+          }
+        }
+      }
+    }
+    
+    // Verificar se o usuário já atingiu o limite (2 reservas futuras)
+    if (futureBookingsCount >= 2) {
+      return NextResponse.json(
+        { error: "Você já possui 2 horários reservados. Não é possível fazer mais reservas." }, 
+        { status: 400 }
+      );
     }
     
     // Atualizar o horário como reservado
