@@ -1,28 +1,55 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import DatePicker from "@/components/ui/datePicker";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import ServiceSelection from "@/components/ServiceSelection";
+import DateSelectionSection from "@/components/DateSelectionSection";
+import TimeSlotsGrid from "@/components/TimeSlotsGrid";
+import TimeSlotLegend from "@/components/TimeSlotLegend";
+import CancelDialog from "@/components/CancelDialog";
+import PixInfoModal from "@/components/PixInfoModal";
+import StrikesInfoModal from "@/components/StrikesInfoModal";
+import NoAvailabilityMessage from "@/components/NoAvailabilityMessage";
+
+import LoadingScreen from "@/components/LoadingScreen";
 import { Calendar, Clock, Scissors, AlertCircle } from "lucide-react";
-import { razorBlade } from '@lucide/lab';
-import { Icon } from 'lucide-react';
 
 export default function Home() {
-  const { data: session } = useSession();
-  const [selectedOption, setSelectedOption] = useState<string | null>("Cabelo");
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [consecutiveGroups, setConsecutiveGroups] = useState<any[]>([]);
+  const [selectedOption, setSelectedOption] = useState("Cabelo");
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [consecutiveGroups, setConsecutiveGroups] = useState([]);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [currentCancelIndex, setCurrentCancelIndex] = useState(null);
+  const [showPixInfo, setShowPixInfo] = useState(false);
+  const [showStrikesInfo, setShowStrikesInfo] = useState(false);
+  const [userStrikes, setUserStrikes] = useState(0);
+  const [firstLoading, setFirstLoading] = useState(true);
 
-  const handleDateChange = async (selectedDate: string) => {
-    console.log("Data selecionada:", selectedDate);
+  const PIX_KEY = "000.000.000-00";
+  const CANCELATION_FEE = 20.00;
+  
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      window.location.href = "/auth";
+    },
+  });
+
+  if (status === "loading") {
+    return <LoadingScreen message="Verificando sua sessão..." />;
+  }
+
+  const handleDateChange = async (selectedDate) => {
     setSelectedDate(selectedDate);
+    setErrorMessage(null);
     fetchTimeSlots(selectedDate);
   };
 
-  const fetchTimeSlots = async (date: string) => {
+  const fetchTimeSlots = async (date) => {
     setIsLoading(true);
     try {
       const response = await fetch(`/api/schedules?date=${date}`);
@@ -40,11 +67,12 @@ export default function Home() {
       toast.error("Erro ao carregar horários. Tente novamente.");
     } finally {
       setIsLoading(false);
+      setFirstLoading(false);
     }
   };
   
-  const findConsecutiveSlots = (slots: any[]) => {
-    const groups: number[][] = [];
+  const findConsecutiveSlots = (slots) => {
+    const groups = [];
     
     for (let i = 0; i < slots.length - 1; i++) {
       if (
@@ -68,18 +96,15 @@ export default function Home() {
     setConsecutiveGroups(groups);
   };
 
-  const handleOptionChange = (option: string) => {
+  const handleOptionChange = (option) => {
     setSelectedOption(option);
-    console.log("Opção selecionada:", option);
+    setErrorMessage(null);
   };
 
-  const handleReservation = async (timeSlotIndex: number) => {
-    if (!session) {
-      toast.error("Você precisa estar logado para fazer uma reserva.");
-      return;
-    }
-    
+  const handleReservation = async (timeSlotIndex) => {
     setIsLoading(true);
+    setErrorMessage(null);
+    
     try {
       if (selectedOption === "Cabelo e Barba") {
         // Encontrar o grupo consecutivo que começa com o timeSlotIndex selecionado
@@ -88,8 +113,7 @@ export default function Home() {
           throw new Error("Não foi possível encontrar horários consecutivos disponíveis");
         }
         
-
-      const responseFirst  = await fetch("/api/schedules", {
+        const responseFirst = await fetch("/api/schedules", {
           method: "POST",
           body: JSON.stringify({
             date: selectedDate,
@@ -97,9 +121,14 @@ export default function Home() {
             service: "Cabelo"
           }),
           headers: { "Content-Type": "application/json" },
-        })
-
-
+        });
+  
+        // Verificar se a primeira requisição foi bem-sucedida
+        if (!responseFirst.ok) {
+          const errorData = await responseFirst.json();
+          throw new Error(errorData.error || "Erro ao reservar horário");
+        }
+  
         const responseSecond = await fetch("/api/schedules", {
           method: "POST",
           body: JSON.stringify({
@@ -108,25 +137,17 @@ export default function Home() {
             service: "Barba"
           }),
           headers: { "Content-Type": "application/json" },
-        })
+        });
         
-        console.log(responseFirst);
-        console.log(responseSecond);
-
-        // Verificar se ambas as requisições foram bem-sucedidas
-        if (!responseFirst.ok || !responseSecond.ok) {
-          // Se uma falhar, tentar cancelar a outra para evitar reservas parciais
-          if (responseFirst.ok) {
-            await fetch(`/api/schedules?date=${selectedDate}&timeSlotIndex=${group[0]}`, {
-              method: "DELETE",
-            });
-          }
-          if (responseSecond.ok) {
-            await fetch(`/api/schedules?date=${selectedDate}&timeSlotIndex=${group[1]}`, {
-              method: "DELETE",
-            });
-          }
-          throw new Error("Não foi possível reservar ambos os horários");
+        // Verificar se a segunda requisição foi bem-sucedida
+        if (!responseSecond.ok) {
+          // Se a primeira funcionou mas a segunda falhou, cancelar a primeira
+          await fetch(`/api/schedules?date=${selectedDate}&timeSlotIndex=${group[0]}`, {
+            method: "DELETE",
+          });
+          
+          const errorData = await responseSecond.json();
+          throw new Error(errorData.error || "Erro ao reservar horário");
         }
         
         toast.success("Horários para Cabelo e Barba reservados com sucesso!");
@@ -141,65 +162,104 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
         });
   
-        const data = await response.json();
         if (!response.ok) {
+          const data = await response.json();
           throw new Error(data.error || "Erro ao reservar horário");
         }
   
+        const data = await response.json();
         toast.success("Horário reservado com sucesso!");
       }
       
-      fetchTimeSlots(selectedDate!);
-    } catch (error: any) {
+      fetchTimeSlots(selectedDate);
+    } catch (error) {
       console.error("Erro ao reservar horário:", error);
+      setErrorMessage(error.message || "Erro ao reservar horário. Tente novamente.");
       toast.error(error.message || "Erro ao reservar horário. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
+  
 
-  const handleCancelReservation = async (timeSlotIndex: number) => {
-    if (!session) {
-      toast.error("Você precisa estar logado para cancelar uma reserva.");
+  const handleCancelReservation = async (timeSlotIndex) => {
+    const slot = availableSlots[timeSlotIndex];
+    if (!slot) return;
+
+    // Verificar se é cancelamento em cima da hora
+    const now = new Date();
+    const [hours, minutes] = slot.time.split(':').map(Number);
+    const appointmentTime = new Date();
+    appointmentTime.setHours(hours, minutes, 0, 0);
+    
+    // Calcular diferença em minutos
+    const diffMs = appointmentTime.getTime() - now.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    
+    // Se for menos de 60 minutos (1 hora) de antecedência
+    if (diffMinutes < 60 && diffMinutes > 0) {
+      setCurrentCancelIndex(timeSlotIndex);
+      setShowCancelDialog(true);
       return;
     }
+    
+    // Caso contrário, prosseguir com o cancelamento normal
+    executeCancelation(timeSlotIndex);
+  };
 
+  const executeCancelation = async (timeSlotIndex, accCancelTax = false) => {
     setIsLoading(true);
+    setErrorMessage(null);
+    
     try {
-      const response = await fetch(`/api/schedules?date=${selectedDate}&timeSlotIndex=${timeSlotIndex}`, {
+      const response = await fetch(`/api/schedules?date=${selectedDate}&timeSlotIndex=${timeSlotIndex}&accCancelTax=${accCancelTax}`, {
         method: "DELETE",
       });
-
+  
       const data = await response.json();
       
       if (!response.ok) {
         throw new Error(data.error || "Erro ao cancelar reserva");
       }
-
+  
+      // Armazenar os strikes retornados pelo backend
+      if (data.strikes !== undefined) {
+        setUserStrikes(data.strikes);
+      }
+  
       toast.success("Reserva cancelada com sucesso!");
-      fetchTimeSlots(selectedDate!);
-    } catch (error: any) {
+      fetchTimeSlots(selectedDate);
+    } catch (error) {
       console.error("Erro ao cancelar reserva:", error);
+      setErrorMessage(error.message || "Erro ao cancelar reserva. Tente novamente.");
       toast.error(error.message || "Erro ao cancelar reserva. Tente novamente.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isUserReservation = (slot: any) => {
+  const confirmLateCancelation = (strike) => {
+    if (currentCancelIndex !== null) {
+      executeCancelation(currentCancelIndex, !strike);
+      setShowCancelDialog(false);
+      if (strike === false) {
+        setShowPixInfo(true);
+      } else {
+        setShowStrikesInfo(true);
+      }
+    }
+  };
+  
+  const isUserReservation = (slot) => {
     return slot.booked && slot.userId === session?.user?.id;
   };
 
-  const isPastTimeSlot = (slot: any) => {
-    return slot.isPast;
-  };
-  
-  const isPartOfConsecutiveGroup = (index: number): boolean => {
+  const isPartOfConsecutiveGroup = (index) => {
     if (selectedOption !== "Cabelo e Barba") return true;
     return consecutiveGroups.some(group => group[0] === index);
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     // Adiciona a hora para garantir que seja interpretado no fuso local
     const date = new Date(`${dateString}T12:00:00`);
     
@@ -219,33 +279,19 @@ export default function Home() {
     return `Horários de ${weekDay} - ${day}/${month}`;
   };
   
-  const getDayOfWeek = (dateString: string) => {
+  const getDayOfWeek = (dateString) => {
     const date = new Date(`${dateString}T12:00:00`);
     return date.getDay(); // 0 = domingo, 6 = sábado
   };
   
-  const isWeekend = (dateString: string) => {
+  const isWeekend = (dateString) => {
     const dayOfWeek = getDayOfWeek(dateString);
     return dayOfWeek === 0 || dayOfWeek === 6; // 0 = domingo, 6 = sábado
   };
 
-  // Service icons mapping
-  const getServiceIcon = (service: string) => {
-    switch(service) {
-      case "Cabelo":
-        return <Scissors className="w-4 h-4 mr-1" />;
-      case "Barba":
-        return  <Icon iconNode={razorBlade} className="w-4 h-4 mr-1" />;
-      case "Cabelo e Barba":
-        return (
-          <div className="flex items-center">
-            <Scissors className="w-3 h-3 mr-1" />
-            <Icon iconNode={razorBlade} className="w-3 h-3" />
-          </div>
-        );
-      default:
-        return null;
-    }
+  const handleCopyPix = () => {
+    navigator.clipboard.writeText(PIX_KEY);
+    toast.success("Chave PIX copiada!");
   };
 
   return (
@@ -256,116 +302,34 @@ export default function Home() {
           <p className="text-gray-500 mt-2">Agende seu horário</p>
         </div>
         
-        {/* Date Picker with Icon */}
-        <div className="mb-6">
-          <div className="flex items-center mb-2">
-            <Calendar className="w-5 h-5 text-gray-500 mr-2" />
-            <span className="text-gray-700 font-medium">Escolha uma data</span>
-          </div>
-          <DatePicker label="" onChange={handleDateChange} />
-        </div>
-
-        {/* Service Selection Tabs */}
-        <div className="mb-8">
-          <div className="flex items-center mb-3">
-            <Scissors className="w-5 h-5 text-gray-500 mr-2" />
-            <span className="text-gray-700 font-medium">Selecione o serviço</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 bg-gray-100 p-1 rounded-lg">
-            <button
-              onClick={() => handleOptionChange("Cabelo")}
-              className={`py-3 rounded-lg text-sm font-medium flex items-center justify-center transition-all duration-200 ${
-                selectedOption === "Cabelo" 
-                  ? "bg-blue-600 text-white shadow-md" 
-                  : "bg-transparent text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Scissors className={`w-4 h-4 mr-1 ${selectedOption === "Cabelo" ? "text-white" : "text-gray-500"}`} />
-              Cabelo
-            </button>
-            <button
-              onClick={() => handleOptionChange("Barba")}
-              className={`py-3 rounded-lg text-sm font-medium flex items-center justify-center transition-all duration-200 ${
-                selectedOption === "Barba" 
-                  ? "bg-blue-600 text-white shadow-md" 
-                  : "bg-transparent text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <Icon iconNode={razorBlade} className={`w-4 h-4 mr-1 ${selectedOption === "Barba" ? "text-white" : "text-gray-500"}`} />
-              Barba
-            </button>
-            <button
-              onClick={() => handleOptionChange("Cabelo e Barba")}
-              className={`py-3 rounded-lg text-sm font-medium flex items-center justify-center transition-all duration-200 ${
-                selectedOption === "Cabelo e Barba" 
-                  ? "bg-blue-600 text-white shadow-md" 
-                  : "bg-transparent text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <div className="flex items-center mr-1">
-                <Scissors className={`w-3 h-3 mr-1 ${selectedOption === "Cabelo e Barba" ? "text-white" : "text-gray-500"}`} />
-                <Icon iconNode={razorBlade} className={`w-3 h-3 ${selectedOption === "Cabelo e Barba" ? "text-white" : "text-gray-500"}`} />
-              </div>
-              Combo
-            </button>
-          </div>
-          
-          {/* Service Info */}
-          {selectedOption === "Cabelo e Barba" && (
-            <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg flex items-center">
-              <div className="bg-blue-100 rounded-full p-2 mr-3">
-                <Clock className="w-5 h-5 text-blue-600" />
-              </div>
-              <p className="text-sm text-blue-700">
-                Para Cabelo e Barba, serão reservados dois horários consecutivos
-              </p>
-            </div>
-          )}
-        </div>
+        <DateSelectionSection onChange={handleDateChange} />
         
-        {/* Loading State */}
-        {isLoading && (
-          <div className="py-12 flex flex-col items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-            <p className="text-gray-500">Carregando horários disponíveis...</p>
-          </div>
-        )}
+        <ServiceSelection 
+          selectedOption={selectedOption} 
+          onOptionChange={handleOptionChange} 
+        />
+        
+        {firstLoading && <LoadingScreen message="Carregando horários disponíveis..." />}
 
         {/* No Session Warning */}
-        {!session && !isLoading && (
+        errorMessage && (
           <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center">
             <div className="bg-yellow-100 rounded-full p-2 mr-3">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p className="text-sm text-yellow-700">
-              Faça login para reservar um horário
-            </p>
+            <p className="text-sm text-red-700">{errorMessage}</p>
           </div>
         )}
-
-        {/* Weekend or No Availability Message */}
-        {selectedDate && !isLoading && availableSlots.length === 0 && (
-          <div className="py-8 flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded-lg mb-6">
-            <div className="bg-gray-100 rounded-full p-3 mb-4">
-              <AlertCircle className="w-8 h-8 text-gray-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {isWeekend(selectedDate) 
-                ? "Não atendemos nos finais de semana" 
-                : "Não há horários disponíveis para este dia"}
-            </h3>
-            <p className="text-gray-500 text-center max-w-xs">
-              {isWeekend(selectedDate)
-                ? "Nosso estabelecimento está fechado aos sábados e domingos. Por favor, selecione um dia útil para agendar seu horário."
-                : "Todos os horários deste dia já foram reservados ou não há atendimento nesta data. Por favor, escolha outra data."}
-            </p>
-          </div>
+        
+        {!firstLoading && selectedDate && availableSlots.length === 0 && (
+          <NoAvailabilityMessage 
+            isWeekend={isWeekend(selectedDate)} 
+          />
         )}
 
-        {/* Available Time Slots */}
-        {selectedDate && availableSlots.length > 0 && !isLoading && (
+        {selectedDate && availableSlots.length > 0 && (
           <div>
             <div className="flex items-center mb-4">
               <Clock className="w-5 h-5 text-gray-500 mr-2" />
@@ -374,112 +338,45 @@ export default function Home() {
               </h3>
             </div>
             
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              {availableSlots.map((slot, index) => {
-                const isPast = slot.isPast;
-                const isAvailableForSelectedService = isPartOfConsecutiveGroup(index);
-                const showReservationButton = selectedOption !== "Cabelo e Barba" || isAvailableForSelectedService;
-                const isConsecutiveStart = selectedOption === "Cabelo e Barba" && consecutiveGroups.some(g => g[0] === index);
-                
-                return (
-                  <div 
-                    key={index} 
-                    className={`p-3 rounded-lg shadow-sm transition-all duration-200 ${
-                      isPast 
-                        ? "bg-gray-100 border border-gray-200" 
-                        : slot.booked 
-                          ? isUserReservation(slot) 
-                            ? "bg-green-50 border border-green-200" 
-                            : "bg-red-50 border border-red-100" 
-                          : isConsecutiveStart
-                            ? "bg-blue-50 border border-blue-200" 
-                            : "bg-white border border-gray-200 hover:border-blue-300 hover:shadow"
-                    }`}
-                  >
-                    <p className="text-center font-medium mb-2">
-                      {slot.time}
-                    </p>
-                    <div className="flex justify-center">
-                      {isPast ? (
-                        <span className="text-xs text-gray-500 bg-gray-100 py-1 px-2 rounded-full flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Horário passado
-                        </span>
-                      ) : !slot.booked ? (
-                        showReservationButton ? (
-                          <button
-                            onClick={() => handleReservation(index)}
-                            className={`px-3 py-1 text-sm rounded-full w-full flex items-center justify-center ${
-                              isConsecutiveStart 
-                                ? "bg-blue-600 text-white hover:bg-blue-700" 
-                                : "bg-blue-500 text-white hover:bg-blue-600"
-                            } transition-colors duration-200`}
-                            disabled={isLoading}
-                          >
-                            {getServiceIcon(selectedOption || "")}
-                            Reservar
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-500 bg-gray-100 py-1 px-2 rounded-full">
-                            Indisponível
-                          </span>
-                        )
-                      ) : isUserReservation(slot) ? (
-                        <button
-                          onClick={() => handleCancelReservation(index)}
-                          className="px-3 py-1 bg-red-500 text-white text-sm rounded-full w-full hover:bg-red-600 flex items-center justify-center transition-colors duration-200"
-                          disabled={isLoading}
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Cancelar
-                        </button>
-                      ) : (
-                        <span className="text-xs text-red-500 bg-red-50 py-1 px-2 rounded-full flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Ocupado
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <TimeSlotsGrid 
+              slots={availableSlots}
+              selectedOption={selectedOption}
+              consecutiveGroups={consecutiveGroups}
+              isUserReservation={isUserReservation}
+              isPartOfConsecutiveGroup={isPartOfConsecutiveGroup}
+              handleReservation={handleReservation}
+              handleCancelReservation={handleCancelReservation}
+              isLoading={isLoading}
+            />
             
-            {/* Legend */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Legenda:</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center">
-                  <span className="w-4 h-4 inline-block mr-2 bg-white border border-gray-200 rounded"></span>
-                  <span className="text-xs text-gray-600">Disponível</span>
-                </div>
-                {selectedOption === "Cabelo e Barba" && (
-                  <div className="flex items-center">
-                    <span className="w-4 h-4 inline-block mr-2 bg-blue-50 border border-blue-200 rounded"></span>
-                    <span className="text-xs text-gray-600">Disponível para combo</span>
-                  </div>
-                )}
-                <div className="flex items-center">
-                  <span className="w-4 h-4 inline-block mr-2 bg-green-50 border border-green-200 rounded"></span>
-                  <span className="text-xs text-gray-600">Sua reserva</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-4 h-4 inline-block mr-2 bg-red-50 border border-red-100 rounded"></span>
-                  <span className="text-xs text-gray-600">Ocupado</span>
-                </div>
-                <div className="flex items-center">
-                  <span className="w-4 h-4 inline-block mr-2 bg-gray-100 border border-gray-200 rounded"></span>
-                  <span className="text-xs text-gray-600">Horário passado</span>
-                </div>
-              </div>
-            </div>
+            <TimeSlotLegend showCombo={selectedOption === "Cabelo e Barba"} />
           </div>
         )}
       </div>
+
+      {showCancelDialog && (
+        <CancelDialog 
+          onClose={() => setShowCancelDialog(false)}
+          onConfirm={confirmLateCancelation}
+          fee={CANCELATION_FEE}
+        />
+      )}
+
+      {showPixInfo && (
+        <PixInfoModal 
+          onClose={() => setShowPixInfo(false)}
+          pixKey={PIX_KEY}
+          fee={CANCELATION_FEE}
+          onCopy={handleCopyPix}
+        />
+      )}
+
+      {showStrikesInfo && (
+        <StrikesInfoModal 
+          onClose={() => setShowStrikesInfo(false)}
+          strikes={userStrikes}
+        />
+      )}
     </div>
   );
 }

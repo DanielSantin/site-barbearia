@@ -4,6 +4,9 @@
 import { SessionProvider } from "next-auth/react"; // Importando SessionProvider
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/utils/auth";
+import { redirect } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
 

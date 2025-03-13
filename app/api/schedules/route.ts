@@ -9,7 +9,7 @@ const createDefaultTimeSlots = () => {
   const timeSlots = [];
   for (let hour = 10; hour <= 11; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
+      timeSlots.push  ({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
     }
   }
   for (let hour = 13; hour <= 19; hour++) {
@@ -24,7 +24,6 @@ const isWeekend = (date: string | number | Date) => {
   const dayOfWeek = new Date(date).getDay();
   return dayOfWeek === 6 || dayOfWeek === 5; // 0 = Domingo, 6 = Sábado
 };
-
 
 function isTimeSlotPassed(date: string, timeSlot: any): boolean {
   // Verificar se o slot e o horário existem
@@ -41,13 +40,99 @@ function isTimeSlotPassed(date: string, timeSlot: any): boolean {
   return now > slotDate;
 }
 
+// Função para registrar ações no log
+async function logUserAction(
+  db: any,
+  userId: string,
+  userName: string,
+  actionType: 'reservation' | 'cancellation',
+  date: string,
+  time: string,
+  service?: string,
+  importance: 'normal' | 'important' = 'normal',
+  additionalInfo?: string
+) {
+  try {
+    const logsCollection = db.collection("userActionLogs");
+    
+    await logsCollection.insertOne({
+      userId,
+      userName,
+      actionType,
+      date,
+      time,
+      service,
+      importance,
+      additionalInfo,
+      timestamp: new Date()
+    });
+    
+  } catch (error) {
+    console.error("Erro ao registrar log:", error);
+  }
+}
+
+async function incrementStrikeForUser(client: any, userId: string, incrementValue: number = 1) {
+  const dbAuth = client.db("auth");
+  const userCollection = dbAuth.collection("users");
+
+  try {
+    // Converte userId para ObjectId caso não seja
+    const objectId = new ObjectId(userId);
+
+    // Encontrar o usuário no banco de dados
+    const user = await userCollection.findOne({ _id: objectId });
+
+    // Verifica se o usuário existe
+    if (!user) {
+      throw new Error(`Usuário com ID ${userId} não encontrado`);
+    }
+
+    // Incrementa o valor do striker
+    const updateResult = await userCollection.updateOne(
+      { _id: objectId },
+      { $inc: { strikes: incrementValue }, $setOnInsert: { isBanned: false } } // Incrementa 'strikes' e garante que 'isBanned' seja criado
+    );
+
+    // Verifica se o número de strikes é 5 ou mais e atualiza isBanned
+    if (user.strikes + incrementValue >= 5) {
+      const banResult = await userCollection.updateOne(
+        { _id: objectId },
+        { $set: { isBanned: true } } // Atualiza isBanned para true
+      );
+    }
+
+    const updatedUser = await userCollection.findOne({ _id: new ObjectId(userId) });
+    return updatedUser.strikes;  
+
+  } catch (error) {
+    console.error("Erro ao atualizar striker para o usuário:", error.message);
+  }
+}
+
+
+// Função para verificar se um horário está próximo (menos de 30 minutos)
+function isTimeSlotSoon(date: string, timeSlot: any): boolean {
+  if (!timeSlot || !timeSlot.time) {
+    return false;
+  }
+  
+  const now = new Date();
+  const [hours, minutes] = timeSlot.time.split(':').map(Number);
+  const [year, month, day] = date.split('-').map(Number);
+
+  const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  const thirtyMinutesFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+  return slotDate <= thirtyMinutesFromNow && slotDate > now;
+}
+
 // Busca os horários disponíveis para os próximos 5 dias
 export async function GET(req: Request) { 
   try { 
-
     const client = await clientPromise; 
     const db = client.db(); 
-    const dbAuth = client.db("auth")
+    const dbAuth = client.db("auth");
 
     const schedulesCollection = db.collection("schedules");
 
@@ -55,13 +140,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url); 
     const selectedDate = searchParams.get("date"); 
 
-    if (session){
+    let isAdmin = false;
+    if (session) {
       const userId = session.user?.id;
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
-      let isAdmin = false;
-      if (user?.isAdmin == true){
+      if (user?.isAdmin == true) {
         isAdmin = true;
+      }
+      if (user?.isBanned == true){
+        return NextResponse.json({ error: "Usuário temporariamente banido" }, { status: 400 }); 
       }
     }
 
@@ -89,7 +177,6 @@ export async function GET(req: Request) {
         schedule.timeSlots.some(slot => !slot.time)
       );
       
-
       // Se encontrou slots sem propriedade "time", recria os slots
       if (hasInvalidTimeSlots) {
         await Promise.all(schedules.map(schedule => 
@@ -104,15 +191,20 @@ export async function GET(req: Request) {
       }
     }
     
-    // Marcar horários passados como indisponíveis
+    // Calcula a data/hora de 30 minutos no futuro
+    const now = new Date();
+    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+    
+    // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
       const updatedTimeSlots = schedule.timeSlots.map(slot => {
-        // Usar a função existente para verificar se o horário já passou
-        if (isTimeSlotPassed(selectedDate, slot)) {
+        // Criar um objeto Date para o horário do slot
+        const slotDateTime = new Date(`${selectedDate}T${slot.time}`);
+        if (slotDateTime < thirtyMinutesFromNow) {
           return {
             ...slot,
-            booked: true,
-            isPast: true // Adicionando flag para identificar que é um horário passado
+            isPast: slotDateTime < now, // true se já passou, false se está dentro dos próximos 30 min
+            tooSoon: slotDateTime >= now && slotDateTime < thirtyMinutesFromNow // flag para identificar que é muito próximo
           };
         }
         
@@ -125,7 +217,7 @@ export async function GET(req: Request) {
       };
     });
     
-    // Retorna os schedules com os horários passados marcados como indisponíveis
+    // Retorna os schedules com os horários indisponíveis (passados ou muito próximos)
     return NextResponse.json(schedules); 
   } catch (error) { 
     console.error("Erro na API GET schedules:", error); 
@@ -141,41 +233,54 @@ export async function POST(req: Request) {
     if (!session || !session.user) {
       return NextResponse.json({ error: "Usuário não autenticado" }, { status: 401 });
     }
-
+    
     const { date, timeSlotIndex, service } = await req.json();
-
+    
     if (!date || timeSlotIndex === undefined) {
       return NextResponse.json({ error: "Dados de reserva incompletos" }, { status: 400 });
     }
-
+    
     const client = await clientPromise;
     const db = client.db();
     const schedulesCollection = db.collection("schedules");
-    
+        
     // Buscar agendamento para verificar disponibilidade
     const schedule = await schedulesCollection.findOne({ date });
-    
+        
     if (!schedule) {
       return NextResponse.json({ error: "Agendamento não encontrado" }, { status: 404 });
     }
-    
+        
     // Verificar se o horário está disponível
     if (!schedule.timeSlots[timeSlotIndex] || schedule.timeSlots[timeSlotIndex].booked) {
-      return NextResponse.json({ error: "Horário não disponível" }, { status: 400 });
+      return NextResponse.json({ error: "Horário já reservado, por favor selecione outro horário." }, { status: 400 });
     }
-
+    
+    // Nova verificação: Horário deve ser com pelo menos 1 hora de antecedência
+    const selectedTimeSlot = schedule.timeSlots[timeSlotIndex];
+    const selectedDateTime = new Date(`${date}T${selectedTimeSlot.time}`);
+    const now = new Date();
+    const halfHourFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+    
+    if (selectedDateTime < halfHourFromNow) {
+      return NextResponse.json(
+        { error: "As reservas devem ser feitas com pelo menos 1 hora de antecedência" },
+        { status: 400 }
+      );
+    }
+    
     // Verificar o número de reservas futuras do usuário
     const allSchedules = await schedulesCollection.find().toArray();
-    
+        
     let futureBookingsCount = 0;
-    
+        
     for (const sched of allSchedules) {
       if (sched.timeSlots) {
         for (const slot of sched.timeSlots) {
           // Conta apenas slots reservados pelo usuário atual e que não passaram
           if (
             slot.booked && 
-            slot.userId === session.user.id && 
+            slot.userId === session.user.id &&
             !isTimeSlotPassed(sched.date, slot)
           ) {
             futureBookingsCount++;
@@ -183,15 +288,15 @@ export async function POST(req: Request) {
         }
       }
     }
-    
+        
     // Verificar se o usuário já atingiu o limite (2 reservas futuras)
     if (futureBookingsCount >= 2) {
       return NextResponse.json(
-        { error: "Você já possui 2 horários reservados. Não é possível fazer mais reservas." }, 
+        { error: "Você já possui 2 horários reservados. Não é possível fazer mais reservas." },
         { status: 400 }
       );
     }
-    
+        
     // Atualizar o horário como reservado
     const updatedTimeSlots = [...schedule.timeSlots];
     updatedTimeSlots[timeSlotIndex] = {
@@ -202,13 +307,26 @@ export async function POST(req: Request) {
       service: service || "Não especificado",
       bookedAt: new Date().toISOString()
     };
-    
+        
     // Atualizar no banco de dados
     await schedulesCollection.updateOne(
       { date },
       { $set: { timeSlots: updatedTimeSlots } }
     );
     
+    // Registrar log da reserva
+    await logUserAction(
+      db,
+      session.user.id,
+      session.user.name || "Usuário",
+      'reservation',
+      date,
+      selectedTimeSlot.time,
+      service || "Não especificado",
+      'normal',
+      `Reserva realizada com sucesso para o dia ${date} às ${selectedTimeSlot.time}`
+    );
+        
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Erro na API POST schedules:", error);
@@ -236,6 +354,7 @@ export async function DELETE(req: Request) {
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
     const timeSlotIndex = searchParams.get("timeSlotIndex");
+    const acceptCancelationTax = searchParams.get("accCancelTax");
 
     // Validações básicas
     if (!date || !timeSlotIndex) {
@@ -285,6 +404,28 @@ export async function DELETE(req: Request) {
         error: "Você só pode cancelar suas próprias reservas" 
       }, { status: 403 });  // Forbidden
     }
+    
+    // Verificar se o cancelamento está sendo feito com menos de 30 minutos de antecedência
+    const isSoonCancellation = isTimeSlotSoon(date, targetTimeSlot);
+    const logImportance = isSoonCancellation ? 'important' : 'normal';
+
+    const dateObj = new Date(date);
+    const formattedDate = dateObj.toLocaleDateString("pt-BR"); 
+
+    let strikes;
+    let additionalInfo = ""
+    if (isSoonCancellation == true){
+      if (acceptCancelationTax == "true"){
+        additionalInfo = `Cancelamento realizado com menos de 1 hora de antecedência para o dia ${formattedDate} às ${targetTimeSlot.time} aceitando pagar a taxa`
+      } else {
+        strikes = await incrementStrikeForUser(client, userId)
+        additionalInfo = `Cancelamento realizado com menos de 1 hora de antecedência para o dia ${formattedDate} às ${targetTimeSlot.time} recebendo um strike`
+      }
+    } else {
+      additionalInfo = `Cancelamento realizado com sucesso para o dia ${formattedDate} às ${targetTimeSlot.time}`
+    }
+
+
 
     // Tudo verificado, cancelar a reserva
     await schedulesCollection.updateOne(
@@ -294,19 +435,33 @@ export async function DELETE(req: Request) {
           [`timeSlots.${timeSlotIndexNumber}.booked`]: false,
           [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
           [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.service`]: null,
           [`timeSlots.${timeSlotIndexNumber}.bookedAt`]: null,
           [`timeSlots.${timeSlotIndexNumber}.canceledAt`]: new Date()
         } 
       }
     );
+    
+    // Registrar log do cancelamento
+    await logUserAction(
+      db,
+      userId,
+      session.user.name || "Usuário",
+      'cancellation',
+      date,
+      targetTimeSlot.time,
+      targetTimeSlot.service,
+      logImportance,
+      additionalInfo
+    );
 
     // Buscar dados atualizados
     const updatedSchedule = await schedulesCollection.findOne({ date });
-    
     return NextResponse.json({
       success: true,
       message: "Reserva cancelada com sucesso",
-      schedule: updatedSchedule
+      schedule: updatedSchedule,
+      strikes: strikes !== undefined ? strikes : undefined,  // Retorna 'strikes' se definido, caso contrário retorna 'undefined'
     });
     
   } catch (error) {

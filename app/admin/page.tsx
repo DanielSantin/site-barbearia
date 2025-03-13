@@ -5,8 +5,11 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar } from "lucide-react";
+import DatePicker from "@/components/ui/datePicker";
 
 type TimeSlot = {
+  tooSoon: any;
   time: string;
   userId: string | null;
   userName?: string | null;
@@ -24,6 +27,7 @@ type Schedule = {
 };
 
 type User = {
+  [x: string]: ReactNode;
   _id: string;
   name: string;
   email: string;
@@ -39,6 +43,27 @@ type UserAppointment = {
   service: string;
 };
 
+type LogEntry = {
+  _id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  actionType: string;
+  additionalInfo: string;
+  importance: string;
+  timestamp: string;
+};
+
+type LogSummary = {
+  totalLogs: number;
+  importantLogs: number;
+  actionCounts: {
+    reservations: number;
+    cancellations: number;
+  };
+  importantCancellations: number;
+};
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -51,7 +76,7 @@ export default function AdminPage() {
   );
   const [dates, setDates] = useState<string[]>([]);
   const [blockingService, setBlockingService] = useState<string>("Bloqueado");
-  const [view, setView] = useState<"schedules" | "users">("schedules");
+  const [view, setView] = useState<"schedules" | "users" | "logs">("schedules");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -60,6 +85,91 @@ export default function AdminPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userAppointments, setUserAppointments] = useState<UserAppointment[]>([]);
   const [isLoadingUserData, setIsLoadingUserData] = useState(false);
+
+  //Estados do Log
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logSummary, setLogSummary] = useState<LogSummary | null>(null);
+  const [logsPage, setLogsPage] = useState(1);
+  const [totalLogsPages, setTotalLogsPages] = useState(1);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [logFilters, setLogFilters] = useState({
+    importance: "",
+    actionType: "",
+    userId: "",
+    startDate: "",
+    endDate: ""
+  });
+
+  const fetchLogs = async (page = 1, filters = logFilters) => {
+    try {
+      setIsLoadingLogs(true);
+      setError(null);
+      
+      // Construir URL com parâmetros de consulta
+      const params = new URLSearchParams();
+      params.append("page", page.toString());
+      params.append("limit", "20");
+      
+      if (filters.importance) params.append("importance", filters.importance);
+      if (filters.actionType) params.append("actionType", filters.actionType);
+      if (filters.userId) params.append("userId", filters.userId);
+      if (filters.startDate) params.append("startDate", filters.startDate);
+      if (filters.endDate) params.append("endDate", filters.endDate);
+      
+      const response = await fetch(`/api/admin/logs?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error("Falha ao buscar logs");
+      }
+      
+      const data = await response.json();
+      
+      setLogs(data.logs);
+      setLogSummary(data.summary);
+      setLogsPage(data.pagination.currentPage);
+      setTotalLogsPages(data.pagination.totalPages);
+    } catch (error: any) {
+      console.error("Erro ao buscar logs:", error);
+      setError(error.message || "Falha ao buscar logs. Tente novamente.");
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const clearOldLogs = async (days: number) => {
+    if (!confirm(`Tem certeza que deseja excluir logs com mais de ${days} dias?`)) {
+      return;
+    }
+    
+    try {
+      setError(null);
+      const response = await fetch("/api/admin/logs", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          olderThan: days
+        }),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Falha ao limpar logs");
+      }
+  
+      const result = await response.json();
+      setSuccess(`${result.deletedCount} logs foram excluídos com sucesso.`);
+      setTimeout(() => setSuccess(null), 3000);
+      
+      // Recarregar logs após exclusão
+      fetchLogs();
+    } catch (error: any) {
+      console.error("Erro ao limpar logs:", error);
+      setError(error.message || "Falha ao limpar logs. Tente novamente.");
+    }
+  };
+  
 
   // Gerar datas para os próximos 30 dias
   useEffect(() => {
@@ -75,7 +185,7 @@ export default function AdminPage() {
     if (status === "loading") return;
 
     if (!session) {
-      router.push("/login");
+      router.push("/auth");
       return;
     }
 
@@ -156,6 +266,35 @@ export default function AdminPage() {
     console.log(date);
     setSelectedDate(date);
     fetchSchedules(date);
+  };
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setLogFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const applyLogFilters = () => {
+    fetchLogs(1, logFilters);
+  };
+
+  const resetLogFilters = () => {
+    setLogFilters({
+      importance: "",
+      actionType: "",
+      userId: "",
+      startDate: "",
+      endDate: ""
+    });
+    fetchLogs(1, {
+      importance: "",
+      actionType: "",
+      userId: "",
+      startDate: "",
+      endDate: ""
+    });
   };
 
   const blockTimeSlot = async (date: string, timeSlotIndex: number) => {
@@ -267,6 +406,10 @@ export default function AdminPage() {
       
       // Atualizar lista de usuários
       fetchUsers();
+
+      if (view === "logs") {
+        fetchLogs();
+      }
       
       // Se o usuário está selecionado no modal, atualizar seus dados também
       if (selectedUser && selectedUser._id === userId) {
@@ -350,6 +493,19 @@ export default function AdminPage() {
           >
             Voltar ao Site
           </button>
+          <button
+            onClick={() => {
+              setView("logs");
+              fetchLogs();
+            }}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              view === "logs" 
+                ? "bg-blue-600 text-white" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            Logs do Sistema
+          </button>
         </div>
 
         {error && (
@@ -366,23 +522,13 @@ export default function AdminPage() {
 
         {view === "schedules" && (
           <>
-            <div className="mb-6 p-4 bg-white rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Selecionar Data</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
-                {dates.map((date) => (
-                  <button
-                    key={date}
-                    onClick={() => handleDateChange(date)}
-                    className={`p-2 text-sm border rounded ${
-                      selectedDate === date
-                        ? "bg-blue-600 text-white border-blue-700"
-                        : "bg-white hover:bg-gray-100"
-                    }`}
-                  >
-                    {formatDate(date)}
-                  </button>
-                ))}
-              </div>
+            <h2 className="text-xl font-semibold mb-4">Selecionar Data</h2>
+              <div className="mb-6">
+                <div className="flex items-center mb-2">
+                  <Calendar className="w-5 h-5 text-gray-500 mr-2" />
+                  <span className="text-gray-700 font-medium">Escolha uma data</span>
+                </div>
+                <DatePicker label="" onChange={handleDateChange} obfuscateOldDates={false} />
             </div>
 
             <div className="p-4 bg-white rounded-lg shadow mb-6">
@@ -430,6 +576,8 @@ export default function AdminPage() {
                               <span className="text-gray-500">Passado</span>
                             ) : slot.booked ? (
                               <span className="text-red-600">Reservado</span>
+                            ) : slot.tooSoon ? (
+                              <span className="text-gray-600">Horário indisponível devido a antecedencia</span>
                             ) : (
                               <span className="text-green-600">Disponível</span>
                             )}
@@ -527,7 +675,210 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+{view === "logs" && (
+        <div className="space-y-6">
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Resumo de Logs</h2>
+            {logSummary ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-gray-600">Total de Logs</p>
+                  <p className="text-2xl font-bold text-blue-700">{logSummary.totalLogs}</p>
+                </div>
+                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-gray-600">Logs Importantes</p>
+                  <p className="text-2xl font-bold text-yellow-700">{logSummary.importantLogs}</p>
+                </div>
+                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                  <p className="text-sm text-gray-600">Reservas</p>
+                  <p className="text-2xl font-bold text-green-700">{logSummary.actionCounts.reservations}</p>
+                </div>
+                <div className="p-3 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-sm text-gray-600">Cancelamentos (importantes)</p>
+                  <p className="text-2xl font-bold text-red-700">{logSummary.importantCancellations}</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500 italic">Carregando resumo...</p>
+            )}
+          </div>
+
+          <div className="p-4 bg-white rounded-lg shadow">
+            <div className="flex flex-wrap items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Filtros</h2>
+              <div className="flex space-x-2">
+                <button
+                  onClick={resetLogFilters}
+                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                >
+                  Limpar Filtros
+                </button>
+                <button
+                  onClick={() => clearOldLogs(30)}
+                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Limpar Logs > 30 dias
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Importância</label>
+                <select
+                  name="importance"
+                  value={logFilters.importance}
+                  onChange={handleFilterChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="normal">Normal</option>
+                  <option value="important">Importante</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Ação</label>
+                <select
+                  name="actionType"
+                  value={logFilters.actionType}
+                  onChange={handleFilterChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Todos</option>
+                  <option value="reservation">Reserva</option>
+                  <option value="cancellation">Cancelamento</option>
+                  <option value="login">Login</option>
+                  <option value="register">Registro</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Inicial</label>
+                <input
+                  type="date"
+                  name="startDate"
+                  value={logFilters.startDate}
+                  onChange={handleFilterChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
+                <input
+                  type="date"
+                  name="endDate"
+                  value={logFilters.endDate}
+                  onChange={handleFilterChange}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={applyLogFilters}
+                  className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+                >
+                  Aplicar Filtros
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">Logs de Atividades</h2>
+            
+            {isLoadingLogs ? (
+              <div className="text-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+                <p className="mt-2 text-gray-500">Carregando logs...</p>
+              </div>
+            ) : logs.length === 0 ? (
+              <p className="text-center py-6 text-gray-500 italic">Nenhum log encontrado com os filtros selecionados.</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="py-2 px-4 text-left">Data/Hora</th>
+                        <th className="py-2 px-4 text-left">Usuário</th>
+                        <th className="py-2 px-4 text-left">Ação</th>
+                        <th className="py-2 px-4 text-left">Detalhes</th>
+                        <th className="py-2 px-4 text-left">Importância</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map((log) => (
+                        <tr key={log._id} className="border-t hover:bg-gray-50">
+                          <td className="py-2 px-4 text-sm">
+                            {new Date(log.timestamp).toLocaleString('pt-BR')}
+                          </td>
+                          <td className="py-2 px-4 text-sm">
+                            {log.userName || log.userEmail || log.userId || 'Anônimo'}
+                          </td>
+                          <td className="py-2 px-4 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium 
+                              ${log.actionType === 'reservation' ? 'bg-green-100 text-green-800' : 
+                                log.actionType === 'cancellation' ? 'bg-red-100 text-red-800' : 
+                                log.actionType === 'login' ? 'bg-blue-100 text-blue-800' : 
+                                'bg-gray-100 text-gray-800'}`}>
+                              {log.actionType === 'reservation' ? 'Reserva' : 
+                              log.actionType === 'cancellation' ? 'Cancelamento' :
+                              log.actionType === 'login' ? 'Login' :
+                              log.actionType === 'register' ? 'Registro' : log.actionType}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-sm">{log.additionalInfo}</td>
+                          <td className="py-2 px-4 text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium 
+                              ${log.importance === 'important' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {log.importance === 'important' ? 'Importante' : 'Normal'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Paginação */}
+                <div className="flex justify-between items-center mt-4">
+                  <div className="text-sm text-gray-500">
+                    Página {logsPage} de {totalLogsPages}
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => fetchLogs(logsPage - 1)}
+                      disabled={logsPage <= 1}
+                      className={`px-3 py-1 rounded text-sm ${
+                        logsPage <= 1 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      onClick={() => fetchLogs(logsPage + 1)}
+                      disabled={logsPage >= totalLogsPages}
+                      className={`px-3 py-1 rounded text-sm ${
+                        logsPage >= totalLogsPages 
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Próximo
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       </div>
+
+      
 
       {/* Modal para detalhes do usuário */}
       {showUserModal && selectedUser && (
@@ -568,6 +919,17 @@ export default function AdminPage() {
                       {selectedUser.isBanned ? "Bloqueado" : "Ativo"}
                     </p>
                   </div>
+                  <div>
+                  <p className="text-gray-500 text-sm">Strikes:</p>
+                  <p className="font-medium text-red-700">
+                    {selectedUser.strikes || 0} de 5 strikes
+                  </p>
+                  <div 
+                    className="bg-red-600 h-2.5 rounded-full" 
+                    style={{ width: `${((selectedUser.strikes  || 0) / 5) * 100}%` }}
+                  ></div>
+           
+              </div>
                 </div>
               </div>
               

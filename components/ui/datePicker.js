@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
 
-export default function DatePicker({ label, onChange }) {
+export default function DatePicker({ label, onChange, obfuscateOldDates = true }) {
   const [date, setDate] = useState("");
   const [minDate, setMinDate] = useState("");
 
   // Definir a data atual ao carregar o componente
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString('en-CA');
     setDate(today);
-    setMinDate(today); // Definir a data mínima para hoje
+    if (obfuscateOldDates) {
+      setMinDate(today); // Definir a data mínima para hoje
+    } else {
+      setMinDate(); // Definir a data mínima para hoje
+    }
+
     if (onChange) {
       onChange(today);
     }
