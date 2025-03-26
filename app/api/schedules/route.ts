@@ -4,6 +4,25 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
 
+interface TimeSlot {
+  time: string;
+  userId: string | null;
+  booked?: boolean;
+  userName?: string | null;
+  service?: string | null;
+  bookedAt?: string | null;
+  canceledAt?: Date | null;
+  isPast?: boolean;
+  tooSoon?: boolean;
+}
+
+interface Schedule {
+  _id: any;
+  date: string;
+  timeSlots: TimeSlot[];
+}
+
+
 // Função para criar horários padrão entre 13:00 e 18:00
 const createDefaultTimeSlots = () => {
   const timeSlots = [];
@@ -105,8 +124,8 @@ async function incrementStrikeForUser(client: any, userId: string, incrementValu
     const updatedUser = await userCollection.findOne({ _id: new ObjectId(userId) });
     return updatedUser.strikes;  
 
-  } catch (error) {
-    console.error("Erro ao atualizar striker para o usuário:", error.message);
+  } catch (error: any) {
+    console.error("Erro ao atualizar striker para o usuário:", error?.message || String(error));
   }
 }
 
@@ -140,17 +159,15 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url); 
     const selectedDate = searchParams.get("date"); 
 
-    let isAdmin = false;
     if (session) {
       const userId = session.user?.id;
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
-      if (user?.isAdmin == true) {
-        isAdmin = true;
-      }
       if (user?.isBanned == true){
         return NextResponse.json({ error: "Usuário temporariamente banido" }, { status: 400 }); 
       }
+    } else {
+      return NextResponse.json({ error: "Você precisa estar logado para ver as reservas" }, { status: 400 }); 
     }
 
     if (!selectedDate) { 
@@ -174,7 +191,7 @@ export async function GET(req: Request) {
     } else {
       // Verificar se os slots existentes têm a propriedade "time"
       const hasInvalidTimeSlots = schedules.some(schedule => 
-        schedule.timeSlots.some(slot => !slot.time)
+        schedule.timeSlots.some((slot: TimeSlot) => !slot.time)
       );
       
       // Se encontrou slots sem propriedade "time", recria os slots
@@ -197,7 +214,7 @@ export async function GET(req: Request) {
     
     // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
-      const updatedTimeSlots = schedule.timeSlots.map(slot => {
+      const updatedTimeSlots = schedule.timeSlots.map((slot: TimeSlot) => {
         // Criar um objeto Date para o horário do slot
         const slotDateTime = new Date(`${selectedDate}T${slot.time}`);
         if (slotDateTime < thirtyMinutesFromNow) {

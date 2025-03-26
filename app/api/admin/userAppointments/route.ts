@@ -3,7 +3,26 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
+export const dynamic = 'force-dynamic';
 
+// Define interface for TimeSlot
+interface TimeSlot {
+  time: string;
+  userId: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  services?: string[];
+  observations?: string;
+}
+
+// Define interface for Schedule
+interface Schedule {
+  _id: typeof ObjectId;
+  date: string;
+  timeSlots: TimeSlot[];
+}
 // API para buscar os agendamentos de um usuário específico
 export async function GET(req: Request) {
   try {
@@ -47,25 +66,27 @@ export async function GET(req: Request) {
     // Buscar agendamentos onde algum dos timeSlots contém o userId do usuário alvo
     const userSchedules = await schedulesCollection.find({
       "timeSlots.userId": userId
-    }).toArray();
+    }).toArray() as Schedule[];
 
     // Processar para retornar apenas os slots que pertencem ao usuário
-    const processedSchedules = userSchedules.map(schedule => {
+    const processedSchedules = userSchedules.map((schedule: Schedule) => {
       return {
         _id: schedule._id,
         date: schedule.date,
-        timeSlots: schedule.timeSlots.filter(slot => slot.userId === userId).map(slot => {
-          // Verificar se o horário já passou
-          const isPast = isTimeSlotPassed(schedule.date, slot);
-          return {
-            ...slot,
-            isPast: isPast
-          };
-        })
+        timeSlots: schedule.timeSlots
+          .filter((slot: TimeSlot) => slot.userId === userId)
+          .map((slot: TimeSlot) => {
+            // Verificar se o horário já passou
+            const isPast = isTimeSlotPassed(schedule.date, slot);
+            return {
+              ...slot,
+              isPast: isPast
+            };
+          })
       };
     });
 
-    console.log(processedSchedules)
+    console.log(processedSchedules);
     return NextResponse.json(processedSchedules);
     
   } catch (error) {
@@ -75,7 +96,7 @@ export async function GET(req: Request) {
 }
 
 // Função para verificar se o horário já passou (reutilizando a função existente)
-function isTimeSlotPassed(date, slot) {
+function isTimeSlotPassed(date: string, slot: TimeSlot): boolean {
   const now = new Date();
   const slotDateTime = new Date(date);
   const [hours, minutes] = slot.time.split(':').map(Number);

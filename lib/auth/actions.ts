@@ -13,7 +13,13 @@ export const signIn = async (
   options?: SignInOptions | undefined,
   authorizationParams?: SignInAuthorizationParams | undefined
 ) => {
-    return nextAuthSignIn(provider, options, authorizationParams);
+  // Configura o redirecionamento para a página de verificação após o login
+  const customOptions: SignInOptions = {
+    ...options,
+    callbackUrl: `${window.location.origin}/auth/verify`
+  };
+  
+  return nextAuthSignIn(provider, customOptions, authorizationParams);
 };
 
 export const logOut = async (options?: SignOutParams<true> | undefined) => {

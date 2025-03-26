@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
+export const dynamic = 'force-dynamic';
 
 // API para verificar se o usuário é admin
 export async function GET(req: Request) {

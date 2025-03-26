@@ -1,62 +1,98 @@
-import { NextAuthOptions } from "next-auth"; 
-//Providers
-import GithubProvider from "next-auth/providers/github"; 
-import GoogleProvider from "next-auth/providers/google"; 
-import GitlabProvider from "next-auth/providers/gitlab"; 
-import EmailProvider from "next-auth/providers/email"; 
-//Adapter
-import { Adapter } from "next-auth/adapters"; 
-import { MongoDBAdapter } from "@auth/mongodb-adapter"; 
-//db init
-import clientPromise from "./db"; 
+import { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
+import clientPromise from "./db";
 
-export const authOptions = { 
-  adapter: MongoDBAdapter(clientPromise, { 
-    collections: { 
-      Accounts: "accounts", 
-      Sessions: "sessions", 
-      Users: "users", 
-      VerificationTokens: "verificationTokens", 
-    }, 
-    databaseName: process.env.DB_NAME, 
-  }) as Adapter, 
-  providers: [ 
-    GithubProvider({ 
-      clientId: process.env.GITHUB_ID!, 
-      clientSecret: process.env.GITHUB_SECRET!, 
-    }), 
-    GitlabProvider({ 
-      clientId: process.env.GITLAB_CLIENT_ID!, 
-      clientSecret: process.env.GITLAB_CLIENT_SECRET!, 
-    }), 
-    GoogleProvider({ 
-      clientId: process.env.GOOGLE_CLIENT_ID!, 
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!, 
-    }), 
-    EmailProvider({ 
-      server: { 
-        host: process.env.EMAIL_SERVER_HOST, 
-        port: process.env.EMAIL_SERVER_PORT, 
-        auth: { 
-          user: process.env.EMAIL_SERVER_USER, 
-          pass: process.env.EMAIL_SERVER_PASSWORD, 
-        }, 
-      }, 
-      from: process.env.EMAIL_FROM, 
-    }), 
-  ], 
-  pages: { 
-    signIn: "/auth", // Define a página de login como "/auth" 
-    error: "/auth", // Redireciona para "/auth" quando há um erro 
+const { ObjectId } = require("mongodb");
+
+export const authOptions: NextAuthOptions = {
+  adapter: MongoDBAdapter(clientPromise, {
+    collections: {
+      Accounts: "accounts",
+      Sessions: "sessions",
+      Users: "users",
+      VerificationTokens: "verificationTokens",
+    },
+    databaseName: process.env.DB_NAME,
+  }),
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
+  ],
+  pages: {
+    signIn: "/auth/login",
+    error: "/auth/login",
   },
-  // Adicione esta configuração de callbacks
   callbacks: {
-    session: async ({ session, user }) => {
-      // Adiciona o ID do usuário à sessão
-      if (session?.user && user) {
-        session.user.id = user.id;
+    async jwt({ token, user, trigger, session }) {
+      // Se o usuário está se autenticando, adiciona os dados extras ao token
+      if (user) {
+        token.userId = user.id;
+        try {
+          const client = await clientPromise;
+          const db = client.db(process.env.DB_NAME);
+    
+          const userData = await db.collection("users").findOne({ _id: new ObjectId(user.id) });
+          
+          if (userData) {
+            token.isAdmin = userData.isAdmin ?? false;
+            token.isBanned = userData.isBanned ?? false;
+            token.whatsappVerified = userData.whatsappVerified ?? false;
+            token.phone = userData.phone || null;
+          } else {
+            token.isBanned = false;
+            token.whatsappVerified = false;
+            token.phone = null;
+          }
+        } catch (error) {
+          console.error("Erro ao atualizar dados do token:", error);
+          token.isBanned = false;
+          token.whatsappVerified = false;
+          token.phone = null;
+        }
+      }
+      
+      // Se a sessão for atualizada pelo cliente
+      if (trigger === "update" && session) {
+        // Atualiza as informações no token com as novas informações da sessão
+        if (session.whatsappVerified !== undefined) token.whatsappVerified = session.whatsappVerified;
+        if (session.phone !== undefined) token.phone = session.phone;
+      }
+      
+      return token;
+    },
+    
+    async session({ session, token }) {
+      if (session?.user && token) {
+        session.user.id = token.userId as string;
+        session.user.whatsappVerified = token.whatsappVerified || false;
+        session.user.isBanned = token.isBanned || false;
+        session.user.isAdmin = token.isAdmin || false;
       }
       return session;
     }
   },
-} satisfies NextAuthOptions;
+  events: {
+    async signIn({ user }) {
+      try {
+        const client = await clientPromise;
+        const db = client.db(process.env.DB_NAME);
+        const userData = await db.collection("users").findOne({ _id: new ObjectId(user.id) });
+
+        if (userData?.isBanned) {
+          throw new Error("Usuário banido.");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar banimento:", error);
+        throw new Error("Erro interno ao verificar banimento.");
+      }
+    },
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60,
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+};

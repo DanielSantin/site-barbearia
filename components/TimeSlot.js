@@ -38,28 +38,28 @@ const TimeSlot = ({
   return (
     <div 
       className={`p-3 rounded-lg shadow-sm transition-all duration-200 ${
-        isPast 
-          ? "bg-gray-100 border border-gray-200" 
+        isPast || slot.tooSoon
+          ? "bg-gray-950/20 border border-gray-700" 
           : slot.booked 
             ? isUserSlot
-              ? "bg-green-50 border border-green-200" 
-              : "bg-red-50 border border-red-100" 
+              ? "bg-indigo-900/90 border border-indigo-600" 
+              : "bg-red-900 border border-red-800" 
             : isConsecutiveStart
-              ? "bg-blue-50 border border-blue-200" 
-              : "bg-white border border-gray-200 hover:border-blue-300 hover:shadow"
+              ? "bg-gray-900 border border-indigo-700" 
+              : "bg-gray-900 border border-gray-700 hover:border-indigo-600 hover:shadow"
       }`}
     >
-      <p className="text-center font-medium mb-2">
+      <p className="text-center font-medium mb-2 text-gray-300">
         {slot.time}
       </p>
       <div className="flex justify-center">
         {isPast ? (
-          <span className="text-xs text-gray-500 bg-gray-100 py-1 px-2 rounded-full flex items-center">
-            <Clock className="w-3 h-3 mr-1" />
+          <span className="text-xs text-gray-400 bg-gray-800 py-1 px-2 rounded-full flex items-center">
+            <Clock className="w-3 h-3 mr-1 " />
             Horário passado
           </span>
         ) : slot.tooSoon && !slot.booked ? (
-          <span className="text-xs text-gray-500 bg-gray-100 py-1 px-2 rounded-full flex items-center">
+          <span className="text-xs text-gray-400 bg-gray-800 py-1 px-2 rounded-full flex items-center">
             <Clock className="w-3 h-3 mr-1" />
             Fora do prazo
           </span>
@@ -69,8 +69,8 @@ const TimeSlot = ({
               onClick={() => onReserve(index)}
               className={`px-3 py-1 text-sm rounded-full w-full flex items-center justify-center ${
                 isConsecutiveStart 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "bg-blue-500 text-white hover:bg-blue-600"
+                  ? "bg-blue-900 text-white hover:bg-indigo-950" 
+                  : "bg-blue-700 text-white hover:bg-indigo-800"
               } transition-colors duration-200`}
               disabled={isLoading}
             >
@@ -78,14 +78,14 @@ const TimeSlot = ({
               Reservar
             </button>
           ) : (
-            <span className="text-xs text-gray-500 bg-gray-100 py-1 px-2 rounded-full">
+            <span className="text-xs text-gray-400 bg-gray-800 py-1 px-2 rounded-full flex items-center">
               Indisponível
             </span>
           )
         ) : isUserSlot ? (
           <button
             onClick={() => onCancel(index)}
-            className="px-3 py-1 bg-red-500 text-white text-sm rounded-full w-full hover:bg-red-600 flex items-center justify-center transition-colors duration-200"
+            className="px-3 py-1 bg-red-600 text-white text-sm rounded-full w-full hover:bg-red-700 flex items-center justify-center transition-colors duration-200"
             disabled={isLoading}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -94,7 +94,7 @@ const TimeSlot = ({
             Cancelar
           </button>
         ) : (
-          <span className="text-xs text-red-500 bg-red-50 py-1 px-2 rounded-full flex items-center">
+          <span className="text-xs text-red-300 bg-red-900 py-1 px-2 rounded-full flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

@@ -38,9 +38,9 @@ const StrikesInfoModal = ({ onClose, strikes }) => {
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-medium text-gray-800">Seu status atual:</h3>
             <span className={`px-2 py-1 text-xs rounded-full ${
-              strikes >= 3 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+              strikes >= 5 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
             }`}>
-              {strikes} / 3 strikes
+              {strikes} / 5 strikes
             </span>
           </div>
           
@@ -49,7 +49,7 @@ const StrikesInfoModal = ({ onClose, strikes }) => {
               className={`h-2.5 rounded-full ${
                 strikes >= 3 ? 'bg-red-600' : 'bg-yellow-500'
               }`} 
-              style={{ width: `${Math.min(strikes / 3 * 100, 100)}%` }}
+              style={{ width: `${Math.min(strikes / 5 * 100, 100)}%` }}
             ></div>
           </div>
           
@@ -65,7 +65,7 @@ const StrikesInfoModal = ({ onClose, strikes }) => {
           <ul className="text-sm text-gray-600 space-y-1 list-disc pl-5">
             <li>Cada cancelamento tardio (menos de 1 hora) gera um strike</li>
             <li>Strikes são acumulativos por um período de 30 dias</li>
-            <li>Ao atingir 3 strikes, você fica impossibilitado de fazer novas reservas por 7 dias</li>
+            <li>Ao atingir 5 strikes, você fica impossibilitado de fazer novas reserva</li>
             <li>Você pode evitar strikes pagando a taxa de cancelamento</li>
           </ul>
         </div>

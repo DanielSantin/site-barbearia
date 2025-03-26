@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar } from "lucide-react";
-import DatePicker from "@/components/ui/datePicker";
+import LoadingScreen from "@/components/LoadingScreen";
+import DateSelectionSection from "@/components/DateSelectionSection";
+import { ReactNode } from 'react';
 
 type TimeSlot = {
   tooSoon: any;
@@ -215,7 +216,7 @@ export default function AdminPage() {
   const fetchSchedules = async (date: string) => {
     try {
       setError(null);
-      const response = await fetch(`/api/schedules?date=${date}`);
+      const response = await fetch(`/api/admin/schedules?date=${date}`);
       if (!response.ok) throw new Error("Falha ao buscar agendamentos");
       
       const data = await response.json();
@@ -436,9 +437,7 @@ export default function AdminPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <LoadingScreen message="Verificando sua sessão..." />
     );
   }
 
@@ -460,9 +459,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50">
+    <div className="min-h-screen p-6 bg-gradient-to-b from-gray-900 to-black">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">
+        <h1 className="text-3xl font-bold text-gray-100 mb-6">
           Painel do Administrador
         </h1>
         
@@ -472,7 +471,7 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded-lg font-medium ${
               view === "schedules" 
                 ? "bg-blue-600 text-white" 
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                : "bg-gray-700 text-gray-200 hover:bg-gray-600"
             }`}
           >
             Gerenciar Agendamentos
@@ -482,16 +481,10 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded-lg font-medium ${
               view === "users" 
                 ? "bg-blue-600 text-white" 
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                : "bg-gray-700 text-gray-200 hover:bg-gray-600"
             }`}
           >
             Gerenciar Usuários
-          </button>
-          <button
-            onClick={() => router.push("/")}
-            className="ml-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
-            Voltar ao Site
           </button>
           <button
             onClick={() => {
@@ -501,39 +494,38 @@ export default function AdminPage() {
             className={`px-4 py-2 rounded-lg font-medium ${
               view === "logs" 
                 ? "bg-blue-600 text-white" 
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                : "bg-gray-700 text-gray-200 hover:bg-gray-600"
             }`}
           >
             Logs do Sistema
           </button>
+          <button
+            onClick={() => router.push("/")}
+            className="ml-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Voltar ao Site
+          </button>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-900 border border-red-700 text-red-100 rounded">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+          <div className="mb-4 p-3 bg-green-900 border border-green-700 text-green-100 rounded">
             {success}
           </div>
         )}
 
         {view === "schedules" && (
           <>
-            <h2 className="text-xl font-semibold mb-4">Selecionar Data</h2>
-              <div className="mb-6">
-                <div className="flex items-center mb-2">
-                  <Calendar className="w-5 h-5 text-gray-500 mr-2" />
-                  <span className="text-gray-700 font-medium">Escolha uma data</span>
-                </div>
-                <DatePicker label="" onChange={handleDateChange} obfuscateOldDates={false} />
-            </div>
+            <DateSelectionSection onChange={handleDateChange} selectedDate={selectedDate} />
 
-            <div className="p-4 bg-white rounded-lg shadow mb-6">
+            <div className="p-4 bg-gray-800 rounded-lg shadow mb-6">
               <div className="flex flex-wrap items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold text-gray-100">
                   Agendamentos para {formatDate(selectedDate)}
                 </h2>
                 <div className="flex items-center space-x-2 mt-2 sm:mt-0">
@@ -542,7 +534,7 @@ export default function AdminPage() {
                     value={blockingService}
                     onChange={(e) => setBlockingService(e.target.value)}
                     placeholder="Motivo do bloqueio"
-                    className="border rounded px-3 py-1 text-sm"
+                    className="border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-1 text-sm"
                   />
                   <button
                     onClick={() => blockEntireDay(selectedDate)}
@@ -554,12 +546,12 @@ export default function AdminPage() {
               </div>
 
               {schedules.length === 0 ? (
-                <p className="text-gray-500 italic">Nenhum horário encontrado para esta data.</p>
+                <p className="text-gray-400 italic">Nenhum horário encontrado para esta data.</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white">
+                  <table className="min-w-full bg-gray-700 text-gray-200 border-gray-600">
                     <thead>
-                      <tr className="bg-gray-100">
+                      <tr className="bg-gray-800 border-b border-gray-600">
                         <th className="py-2 px-4 text-left">Horário</th>
                         <th className="py-2 px-4 text-left">Status</th>
                         <th className="py-2 px-4 text-left">Cliente</th>
@@ -569,22 +561,34 @@ export default function AdminPage() {
                     </thead>
                     <tbody>
                       {schedules[0]?.timeSlots.map((slot, index) => (
-                        <tr key={index} className="border-t hover:bg-gray-50">
+                        <tr key={index} className="border-t border-gray-600 hover:bg-gray-600">
                           <td className="py-2 px-4">{slot.time}</td>
                           <td className="py-2 px-4">
                             {slot.isPast ? (
-                              <span className="text-gray-500">Passado</span>
+                              <span className="text-gray-400">Passado</span>
                             ) : slot.booked ? (
-                              <span className="text-red-600">Reservado</span>
+                              <span className="text-red-400">Reservado</span>
                             ) : slot.tooSoon ? (
-                              <span className="text-gray-600">Horário indisponível devido a antecedencia</span>
+                              <span className="text-gray-400">Horário indisponível devido a antecedencia</span>
                             ) : (
-                              <span className="text-green-600">Disponível</span>
+                              <span className="text-green-400">Disponível</span>
                             )}
                           </td>
                           <td className="py-2 px-4">
-                            {slot.userName || "-"}
-                          </td>
+                          {slot.userName ? (
+                            <button
+                              onClick={() => {
+                                const user = users.find(u => u._id === slot.userId);
+                                if (user) handleUserClick(user);
+                              }}
+                              className="text-blue-400 hover:underline cursor-pointer"
+                            >
+                              {slot.userName}
+                            </button>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
                           <td className="py-2 px-4">
                             {slot.service || "-"}
                           </td>
@@ -594,19 +598,19 @@ export default function AdminPage() {
                                 {!slot.booked ? (
                                   <button
                                     onClick={() => blockTimeSlot(selectedDate, index)}
-                                    className="bg-yellow-500 text-white px-3 py-1 rounded text-sm hover:bg-yellow-600 mr-2"
+                                    className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 mr-2"
                                   >
                                     Bloquear
                                   </button>
                                 ) : !slot.userId ? (
                                   <button
                                     onClick={() => unblockTimeSlot(selectedDate, index)}
-                                    className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
                                   >
                                     Desbloquear
                                   </button>
                                 ) : (
-                                  <span className="text-sm text-gray-500">Reservado pelo cliente</span>
+                                  <span className="text-sm text-gray-400">Reservado pelo cliente</span>
                                 )}
                               </>
                             )}
@@ -622,15 +626,15 @@ export default function AdminPage() {
         )}
 
         {view === "users" && (
-          <div className="p-4 bg-white rounded-lg shadow">
+          <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
             <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
             {users.length === 0 ? (
-              <p className="text-gray-500 italic">Nenhum usuário encontrado.</p>
+              <p className="text-gray-400 italic">Nenhum usuário encontrado.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full bg-white">
+                <table className="min-w-full bg-gray-700 border-gray-600">
                   <thead>
-                    <tr className="bg-gray-100">
+                    <tr className="bg-gray-800 border-b border-gray-600">
                       <th className="py-2 px-4 text-left">Nome</th>
                       <th className="py-2 px-4 text-left">Email</th>
                       <th className="py-2 px-4 text-left">Tipo</th>
@@ -640,29 +644,29 @@ export default function AdminPage() {
                   </thead>
                   <tbody>
                     {users.map((user) => (
-                      <tr key={user._id} className="border-t hover:bg-gray-50">
+                      <tr key={user._id} className="border-t border-gray-600 hover:bg-gray-600">
                         <td className="py-2 px-4">{user.name}</td>
                         <td className="py-2 px-4">{user.email}</td>
                         <td className="py-2 px-4">
-                          <span className={user.isAdmin ? "text-purple-600 font-medium" : "text-gray-600"}>
+                          <span className={user.isAdmin ? "text-purple-400 font-medium" : "text-gray-300"}>
                             {user.isAdmin ? "Administrador" : "Cliente"}
                           </span>
                         </td>
                         <td className="py-2 px-4">
-                          <span className={user.isBanned ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
+                          <span className={user.isBanned ? "text-red-400 font-medium" : "text-green-400 font-medium"}>
                             {user.isBanned ? "Bloqueado" : "Ativo"}
                           </span>
                         </td>
                         <td className="py-2 px-4">
                           <button
                             onClick={() => handleUserClick(user)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 mr-2"
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 mr-2"
                           >
                             Ver Detalhes
                           </button>
                           <button
                             onClick={() => toggleUserBan(user._id, user.isBanned || false)}
-                            className={`${user.isBanned ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"} text-white px-3 py-1 rounded text-sm`}
+                            className={`${user.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-3 py-1 rounded text-sm`}
                           >
                             {user.isBanned ? "Desbloquear" : "Bloquear"}
                           </button>
@@ -676,101 +680,101 @@ export default function AdminPage() {
           </div>
         )}
 
-{view === "logs" && (
-        <div className="space-y-6">
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">Resumo de Logs</h2>
-            {logSummary ? (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-gray-600">Total de Logs</p>
-                  <p className="text-2xl font-bold text-blue-700">{logSummary.totalLogs}</p>
+        {view === "logs" && (
+          <div className="space-y-6">
+            <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
+              <h2 className="text-xl font-semibold mb-4">Resumo de Logs</h2>
+              {logSummary ? (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-blue-900 rounded-lg border border-blue-700">
+                    <p className="text-sm text-gray-300">Total de Logs</p>
+                    <p className="text-2xl font-bold text-blue-300">{logSummary.totalLogs}</p>
+                  </div>
+                  <div className="p-3 bg-yellow-900 rounded-lg border border-yellow-700">
+                    <p className="text-sm text-gray-300">Logs Importantes</p>
+                    <p className="text-2xl font-bold text-yellow-300">{logSummary.importantLogs}</p>
+                  </div>
+                  <div className="p-3 bg-green-900 rounded-lg border border-green-700">
+                    <p className="text-sm text-gray-300">Reservas</p>
+                    <p className="text-2xl font-bold text-green-300">{logSummary.actionCounts.reservations}</p>
+                  </div>
+                  <div className="p-3 bg-red-900 rounded-lg border border-red-700">
+                    <p className="text-sm text-gray-300">Cancelamentos (importantes)</p>
+                    <p className="text-2xl font-bold text-red-300">{logSummary.importantCancellations}</p>
+                  </div>
                 </div>
-                <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <p className="text-sm text-gray-600">Logs Importantes</p>
-                  <p className="text-2xl font-bold text-yellow-700">{logSummary.importantLogs}</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-sm text-gray-600">Reservas</p>
-                  <p className="text-2xl font-bold text-green-700">{logSummary.actionCounts.reservations}</p>
-                </div>
-                <div className="p-3 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-sm text-gray-600">Cancelamentos (importantes)</p>
-                  <p className="text-2xl font-bold text-red-700">{logSummary.importantCancellations}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 italic">Carregando resumo...</p>
-            )}
-          </div>
-
-          <div className="p-4 bg-white rounded-lg shadow">
-            <div className="flex flex-wrap items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Filtros</h2>
-              <div className="flex space-x-2">
-                <button
-                  onClick={resetLogFilters}
-                  className="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                >
-                  Limpar Filtros
-                </button>
-                <button
-                  onClick={() => clearOldLogs(30)}
-                  className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  Limpar Logs > 30 dias
-                </button>
-              </div>
+              ) : (
+                <p className="text-gray-400 italic">Carregando resumo...</p>
+              )}
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Importância</label>
-                <select
-                  name="importance"
-                  value={logFilters.importance}
-                  onChange={handleFilterChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                >
-                  <option value="">Todos</option>
-                  <option value="normal">Normal</option>
-                  <option value="important">Importante</option>
-                </select>
+
+            <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
+              <div className="flex flex-wrap items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Filtros</h2>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={resetLogFilters}
+                    className="px-3 py-1 text-sm bg-gray-600 text-gray-200 rounded hover:bg-gray-500"
+                  >
+                    Limpar Filtros
+                  </button>
+                  <button
+                    onClick={() => clearOldLogs(30)}
+                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Limpar Logs de mais de 30 dias
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Ação</label>
-                <select
-                  name="actionType"
-                  value={logFilters.actionType}
-                  onChange={handleFilterChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                >
-                  <option value="">Todos</option>
-                  <option value="reservation">Reserva</option>
-                  <option value="cancellation">Cancelamento</option>
-                  <option value="login">Login</option>
-                  <option value="register">Registro</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data Inicial</label>
-                <input
-                  type="date"
-                  name="startDate"
-                  value={logFilters.startDate}
-                  onChange={handleFilterChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
-                <input
-                  type="date"
-                  name="endDate"
-                  value={logFilters.endDate}
-                  onChange={handleFilterChange}
-                  className="w-full border rounded px-3 py-2 text-sm"
-                />
+              
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Importância</label>
+                  <select
+                    name="importance"
+                    value={logFilters.importance}
+                    onChange={handleFilterChange}
+                    className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  >
+                    <option value="">Todos</option>
+                    <option value="normal">Normal</option>
+                    <option value="important">Importante</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Ação</label>
+                  <select
+                    name="actionType"
+                    value={logFilters.actionType}
+                    onChange={handleFilterChange}
+                    className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  >
+                    <option value="">Todos</option>
+                    <option value="reservation">Reserva</option>
+                    <option value="cancellation">Cancelamento</option>
+                    <option value="login">Login</option>
+                    <option value="register">Registro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Data Inicial</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={logFilters.startDate}
+                    onChange={handleFilterChange}
+                    className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Data Final</label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={logFilters.endDate}
+                    onChange={handleFilterChange}
+                    className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  />
               </div>
               <div className="flex items-end">
                 <button
@@ -783,7 +787,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="p-4 bg-white rounded-lg shadow">
+          <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-300">
             <h2 className="text-xl font-semibold mb-4">Logs de Atividades</h2>
             
             {isLoadingLogs ? (
@@ -796,9 +800,9 @@ export default function AdminPage() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white">
+                  <table className="min-w-full bg-gray-800">
                     <thead>
-                      <tr className="bg-gray-100">
+                      <tr className="bg-gray-700">
                         <th className="py-2 px-4 text-left">Data/Hora</th>
                         <th className="py-2 px-4 text-left">Usuário</th>
                         <th className="py-2 px-4 text-left">Ação</th>
@@ -808,18 +812,30 @@ export default function AdminPage() {
                     </thead>
                     <tbody>
                       {logs.map((log) => (
-                        <tr key={log._id} className="border-t hover:bg-gray-50">
+                        <tr key={log._id} className="border-t hover:bg-gray-800">
                           <td className="py-2 px-4 text-sm">
                             {new Date(log.timestamp).toLocaleString('pt-BR')}
                           </td>
                           <td className="py-2 px-4 text-sm">
-                            {log.userName || log.userEmail || log.userId || 'Anônimo'}
+                          {log.userName ? (
+                            <button
+                              onClick={() => {
+                                const user = users.find(u => u._id === log.userId);
+                                if (user) handleUserClick(user);
+                              }}
+                              className="text-blue-400 hover:underline cursor-pointer"
+                            >
+                              {log.userName}
+                            </button>
+                          ) : (
+                            "-"
+                          )}
                           </td>
                           <td className="py-2 px-4 text-sm">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                              ${log.actionType === 'reservation' ? 'bg-green-100 text-green-800' : 
-                                log.actionType === 'cancellation' ? 'bg-red-100 text-red-800' : 
-                                log.actionType === 'login' ? 'bg-blue-100 text-blue-800' : 
+                              ${log.actionType === 'reservation' ? 'bg-green-100/90 text-green-800' : 
+                                log.actionType === 'cancellation' ? 'bg-red-100/90 text-red-800' : 
+                                log.actionType === 'login' ? 'bg-blue-100/90 text-blue-800' : 
                                 'bg-gray-100 text-gray-800'}`}>
                               {log.actionType === 'reservation' ? 'Reserva' : 
                               log.actionType === 'cancellation' ? 'Cancelamento' :
@@ -830,7 +846,7 @@ export default function AdminPage() {
                           <td className="py-2 px-4 text-sm">{log.additionalInfo}</td>
                           <td className="py-2 px-4 text-sm">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                              ${log.importance === 'important' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                              ${log.importance === 'important' ? 'bg-yellow-100/90 text-yellow-800' : 'bg-gray-100/90 text-gray-800'}`}>
                               {log.importance === 'important' ? 'Importante' : 'Normal'}
                             </span>
                           </td>
@@ -882,109 +898,119 @@ export default function AdminPage() {
 
       {/* Modal para detalhes do usuário */}
       {showUserModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-screen overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Detalhes do Usuário</h2>
-                <button 
-                  onClick={() => setShowUserModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-500 text-sm">Nome:</p>
-                    <p className="font-medium">{selectedUser.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Email:</p>
-                    <p className="font-medium">{selectedUser.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Tipo de conta:</p>
-                    <p className={`font-medium ${selectedUser.isAdmin ? "text-purple-600" : "text-gray-800"}`}>
-                      {selectedUser.isAdmin ? "Administrador" : "Cliente"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-sm">Status:</p>
-                    <p className={`font-medium ${selectedUser.isBanned ? "text-red-600" : "text-green-600"}`}>
-                      {selectedUser.isBanned ? "Bloqueado" : "Ativo"}
-                    </p>
-                  </div>
-                  <div>
-                  <p className="text-gray-500 text-sm">Strikes:</p>
-                  <p className="font-medium text-red-700">
-                    {selectedUser.strikes || 0} de 5 strikes
-                  </p>
-                  <div 
-                    className="bg-red-600 h-2.5 rounded-full" 
-                    style={{ width: `${((selectedUser.strikes  || 0) / 5) * 100}%` }}
-                  ></div>
-           
-              </div>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Agendamentos</h3>
-                {isLoadingUserData ? (
-                  <div className="text-center py-4">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                    <p className="mt-2 text-gray-500">Carregando agendamentos...</p>
-                  </div>
-                ) : userAppointments.length === 0 ? (
-                  <p className="text-gray-500 italic">Nenhum agendamento encontrado.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="py-2 px-4 text-left border">Data</th>
-                          <th className="py-2 px-4 text-left border">Horário</th>
-                          <th className="py-2 px-4 text-left border">Serviço</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                      {userAppointments.map((appointment, index) => (
-                          appointment.timeSlots.map((timeSlot) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="py-2 px-4 border">{formatDateFull(appointment.date)}</td>
-                              <td className="py-2 px-4 border">{timeSlot.time}</td>
-                              <td className="py-2 px-4 border">{timeSlot.service || "Não especificado"}</td>
-                            </tr>
-                          ))
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-              
-              <div className="flex justify-between">
-                <button
-                  onClick={() => toggleUserBan(selectedUser._id, selectedUser.isBanned || false)}
-                  className={`${selectedUser.isBanned ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"} text-white px-4 py-2 rounded`}
-                >
-                  {selectedUser.isBanned ? "Desbloquear Usuário" : "Bloquear Usuário"}
-                </button>
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
-                >
-                  Fechar
-                </button>
-              </div>
+  <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+    <div className="bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-screen overflow-y-auto">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-white">Detalhes do Usuário</h2>
+          <button 
+            onClick={() => setShowUserModal(false)}
+            className="text-gray-300 hover:text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="mb-6 p-4 bg-gray-700 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-gray-300 text-sm">Nome:</p>
+              <p className="font-medium text-white">{selectedUser.name}</p>
             </div>
+            <div>
+              <p className="text-gray-300 text-sm">Email:</p>
+              <p className="font-medium text-white">{selectedUser.email}</p>
+            </div>
+            <div>
+              <p className="text-gray-300 text-sm">Tipo de conta:</p>
+              <p className={`font-medium ${selectedUser.isAdmin ? "text-purple-400" : "text-gray-200"}`}>
+                {selectedUser.isAdmin ? "Administrador" : "Cliente"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-300 text-sm">Status:</p>
+              <p className={`font-medium ${selectedUser.isBanned ? "text-red-400" : "text-green-400"}`}>
+                {selectedUser.isBanned ? "Bloqueado" : "Ativo"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-300 text-sm">Strikes:</p>
+              <p className="font-medium text-red-400">
+                {selectedUser.strikes || 0} de 5 strikes
+              </p>
+              <div 
+                className="bg-red-500 h-2.5 rounded-full" 
+                style={{ width: `${(Number(selectedUser.strikes || 0) / 5) * 100}%` }}
+              ></div>
+            </div>
+            <div>
+            <p className="text-gray-300 text-sm">Telefone:</p>
+            <a
+              href={`https://wa.me/55${selectedUser.whatsappPhone}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-400 hover:underline"
+            >
+              {selectedUser.whatsappPhone} {selectedUser.whatsappVerified ? "(verificado)" : "(não verificado)"}
+            </a>
+          </div>
           </div>
         </div>
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2 text-white">Agendamentos</h3>
+          {isLoadingUserData ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-400 mx-auto"></div>
+              <p className="mt-2 text-gray-300">Carregando agendamentos...</p>
+            </div>
+          ) : userAppointments.length === 0 ? (
+            <p className="text-gray-300 italic">Nenhum agendamento encontrado.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-700">
+                    <th className="py-2 px-4 text-left border border-gray-600 text-gray-200">Data</th>
+                    <th className="py-2 px-4 text-left border border-gray-600 text-gray-200">Horário</th>
+                    <th className="py-2 px-4 text-left border border-gray-600 text-gray-200">Serviço</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {userAppointments.map((appointment, index) => (
+                    appointment.timeSlots.map((timeSlot: { time: string; service?: string }) => (
+                      <tr key={index} className="hover:bg-gray-600">
+                        <td className="py-2 px-4 border border-gray-600 text-gray-200">{formatDateFull(appointment.date)}</td>
+                        <td className="py-2 px-4 border border-gray-600 text-gray-200">{timeSlot.time}</td>
+                        <td className="py-2 px-4 border border-gray-600 text-gray-200">{timeSlot.service || "Não especificado"}</td>
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex justify-between">
+          <button
+            onClick={() => toggleUserBan(selectedUser._id, selectedUser.isBanned || false)}
+            className={`${selectedUser.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-4 py-2 rounded`}
+          >
+            {selectedUser.isBanned ? "Desbloquear Usuário" : "Bloquear Usuário"}
+          </button>
+          <button
+            onClick={() => setShowUserModal(false)}
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-500"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
       )}
     </div>
   );

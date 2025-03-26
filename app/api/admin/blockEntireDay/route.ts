@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     }
     
     // Bloquear todos os horários que ainda não estão reservados por clientes
-    const updatedTimeSlots = schedule.timeSlots.map((slot: any, index: number) => {
+    const updatedTimeSlots = schedule?.timeSlots.map((slot: any, index: number) => {
       // Se já está reservado por um cliente (tem userId), manter como está
       if (slot.userId) return slot;
       
