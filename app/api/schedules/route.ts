@@ -4,24 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
 
-interface TimeSlot {
-  time: string;
-  userId: string | null;
-  booked?: boolean;
-  userName?: string | null;
-  service?: string | null;
-  bookedAt?: string | null;
-  canceledAt?: Date | null;
-  isPast?: boolean;
-  tooSoon?: boolean;
-}
-
-interface Schedule {
-  _id: any;
-  date: string;
-  timeSlots: TimeSlot[];
-}
-
+import { TimeSlot } from "@/models/types"
 
 // Função para criar horários padrão entre 13:00 e 18:00
 const createDefaultTimeSlots = () => {
@@ -41,7 +24,7 @@ const createDefaultTimeSlots = () => {
 
 const isWeekend = (date: string | number | Date) => {
   const dayOfWeek = new Date(date).getDay();
-  return dayOfWeek === 6 || dayOfWeek === 5; // 0 = Domingo, 6 = Sábado
+  return dayOfWeek === 0 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
 };
 
 function isTimeSlotPassed(date: string, timeSlot: any): boolean {
@@ -94,6 +77,7 @@ async function logUserAction(
 async function incrementStrikeForUser(client: any, userId: string, incrementValue: number = 1) {
   const dbAuth = client.db("auth");
   const userCollection = dbAuth.collection("users");
+
 
   try {
     // Converte userId para ObjectId caso não seja
@@ -211,7 +195,7 @@ export async function GET(req: Request) {
     // Calcula a data/hora de 30 minutos no futuro
     const now = new Date();
     const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
-    
+
     // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
       const updatedTimeSlots = schedule.timeSlots.map((slot: TimeSlot) => {
@@ -245,19 +229,30 @@ export async function GET(req: Request) {
 // Reserva um horário
 export async function POST(req: Request) {
   try {
-    // Verificar autenticação
+
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json({ error: "Usuário não autenticado" }, { status: 401 });
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
-    
+
+    const client = await clientPromise;
+    const dbAuth = client.db("auth");
+
+    // Verificar se é admin
+    const userId = session.user._id;
+    const userCollection = dbAuth.collection("users");
+    const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user?.isAdmin) {
+      return NextResponse.json({ error: "A reserva está desabilitada temporariamente. Entre em contato via whatsapp." }, { status: 403 });
+    }
+
     const { date, timeSlotIndex, service } = await req.json();
     
     if (!date || timeSlotIndex === undefined) {
       return NextResponse.json({ error: "Dados de reserva incompletos" }, { status: 400 });
     }
     
-    const client = await clientPromise;
     const db = client.db();
     const schedulesCollection = db.collection("schedules");
         
@@ -297,7 +292,7 @@ export async function POST(req: Request) {
           // Conta apenas slots reservados pelo usuário atual e que não passaram
           if (
             slot.booked && 
-            slot.userId === session.user.id &&
+            slot.userId === session.user._id &&
             !isTimeSlotPassed(sched.date, slot)
           ) {
             futureBookingsCount++;
@@ -319,7 +314,7 @@ export async function POST(req: Request) {
     updatedTimeSlots[timeSlotIndex] = {
       ...updatedTimeSlots[timeSlotIndex],
       booked: true,
-      userId: session.user.id,
+      userId: session.user._id,
       userName: session.user.name || "Usuário",
       service: service || "Não especificado",
       bookedAt: new Date().toISOString()
@@ -334,7 +329,7 @@ export async function POST(req: Request) {
     // Registrar log da reserva
     await logUserAction(
       db,
-      session.user.id,
+      session.user._id,
       session.user.name || "Usuário",
       'reservation',
       date,
@@ -365,7 +360,7 @@ export async function DELETE(req: Request) {
       }, { status: 401 });
     }
     
-    const userId = session.user.id;
+    const userId = session.user._id;
     
     // Extrair dados da URL
     const { searchParams } = new URL(req.url);
@@ -374,7 +369,7 @@ export async function DELETE(req: Request) {
     const acceptCancelationTax = searchParams.get("accCancelTax");
 
     // Validações básicas
-    if (!date || !timeSlotIndex) {
+    if (date == null || timeSlotIndex == null) {
       return NextResponse.json({ 
         error: "Dados incompletos. Forneça date e timeSlotIndex como parâmetros de consulta" 
       }, { status: 400 });

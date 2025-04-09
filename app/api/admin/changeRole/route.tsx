@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
-    const { userId, isBanned } = await req.json();
+    const { userId, newRole } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: "ID do usuário não fornecido" }, { status: 400 });
@@ -37,23 +37,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     }
 
-    // Não permitir que um admin seja banido (proteção adicional)
-    if (targetUser.isAdmin && isBanned) {
-      return NextResponse.json({ error: "Não é possível bloquear um administrador" }, { status: 400 });
+    if (targetUser.isAdmin) {
+        return NextResponse.json({ error: "Não é possível trocar o tipo de conta de um Admin" }, { status: 404 });
     }
+  
 
     // Atualizar o status de banimento do usuário
     await userCollection.updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { isBanned: isBanned } }
+      { $set: { accountRole: newRole } }
     );
     
     return NextResponse.json({ 
       success: true,
-      message: isBanned ? "Usuário bloqueado com sucesso" : "Usuário desbloqueado com sucesso" 
+      message: "Mudança atualizada" 
     });
   } catch (error) {
-    console.error("Erro na API POST toggleUserBan:", error);
+    console.error("Erro na API POST changeRole:", error);
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 });
   }
 }

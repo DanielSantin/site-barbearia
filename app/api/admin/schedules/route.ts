@@ -41,7 +41,7 @@ const createDefaultTimeSlots = () => {
 
 const isWeekend = (date: string | number | Date) => {
   const dayOfWeek = new Date(date).getDay();
-  return dayOfWeek === 6 || dayOfWeek === 5; // 0 = Domingo, 6 = Sábado
+  return dayOfWeek === 0 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
 };
 
 // Busca os horários disponíveis para os próximos 5 dias
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     const selectedDate = searchParams.get("date"); 
 
     // Verificar se é admin
-    const userId = session?.user.id;
+    const userId = session?.user._id;
     const userCollection = dbAuth.collection("users");
     const user = await userCollection.findOne({ _id: new ObjectId(userId) });
 
@@ -67,7 +67,7 @@ export async function GET(req: Request) {
     }
 
     if (session) {
-      const userId = session.user?.id;
+      const userId = session.user?._id;
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
       if (user?.isBanned == true){
@@ -147,4 +147,100 @@ export async function GET(req: Request) {
     console.error("Erro na API GET schedules:", error); 
     return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 }); 
   } 
+}
+
+export async function DELETE(req: Request) {
+  try {
+    // Obter a sessão do usuário autenticado
+    const session = await getServerSession(authOptions);
+    
+    // Verificar se o usuário está autenticado
+    if (!session || !session.user) {
+      return NextResponse.json({ 
+        error: "Não autorizado. Faça login para continuar." 
+      }, { status: 401 });
+    }
+    
+    const userId = session.user._id;
+    const data = await req.json();
+    const {date, timeSlotIndex} = data
+
+    const client = await clientPromise;
+    const dbAuth = client.db("auth");
+    const userCollection = dbAuth.collection("users");
+    const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user?.isAdmin) {
+      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  } 
+    // Validações básicas
+    if (date == null || timeSlotIndex == null) {
+      return NextResponse.json({ 
+        error: "Dados incompletos. Forneça date e timeSlotIndex como parâmetros de consulta" 
+      }, { status: 400 });
+    }
+
+    const timeSlotIndexNumber = parseInt(timeSlotIndex, 10);
+    if (isNaN(timeSlotIndexNumber)) {
+      return NextResponse.json({ 
+        error: "timeSlotIndex deve ser um número" 
+      }, { status: 400 });
+    }
+
+    const db = client.db();
+    const schedulesCollection = db.collection("schedules");
+
+    // Buscar o agendamento
+    const schedule = await schedulesCollection.findOne({ date });
+    
+    if (!schedule) {
+      return NextResponse.json({ 
+        error: "Data não encontrada" 
+      }, { status: 404 });
+    }
+
+    // Verificar se o índice do timeSlot é válido
+    if (timeSlotIndexNumber < 0 || timeSlotIndexNumber >= schedule.timeSlots.length) {
+      return NextResponse.json({ 
+        error: "Índice de horário inválido" 
+      }, { status: 400 });
+    }
+
+    // Verificar se o horário está reservado
+    const targetTimeSlot = schedule.timeSlots[timeSlotIndexNumber];
+    if (!targetTimeSlot.booked) {
+      return NextResponse.json({ 
+        error: "Este horário não está reservado" 
+      }, { status: 400 });
+    }
+
+    // Tudo verificado, cancelar a reserva
+    await schedulesCollection.updateOne(
+      { date },
+      { 
+        $set: { 
+          [`timeSlots.${timeSlotIndexNumber}.booked`]: false,
+          [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.service`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.bookedAt`]: null,
+          [`timeSlots.${timeSlotIndexNumber}.canceledAt`]: new Date()
+        } 
+      }
+    );
+    
+    // Buscar dados atualizados
+    const updatedSchedule = await schedulesCollection.findOne({ date });
+    return NextResponse.json({
+      success: true,
+      message: "Reserva cancelada com sucesso",
+      schedule: updatedSchedule,
+    });
+    
+  } catch (error) {
+    console.error("Erro na API DELETE schedules:", error);
+    return NextResponse.json({ 
+      error: "Erro interno do servidor" 
+    }, { status: 500 });
+  }
 }

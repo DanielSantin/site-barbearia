@@ -16,6 +16,19 @@ export class WhatsappVerificationService {
     return db.collection("whatsappVerifications");
   }
 
+
+  async getExistingCodeIfValid(phoneNumber: string): Promise<string | null> {
+    const verificationCollection = await this.getCollection();
+  
+    const verification = await verificationCollection.findOne({
+      phoneNumber,
+      expiry: { $gt: new Date() },
+      verified: false
+    });
+  
+    return verification?.code || null;
+  }
+  
   /**
    * Generate and store a new verification code for a phone number
    */

@@ -1,7 +1,7 @@
 // components/auth/AuthCard.tsx
-import { Scissors } from "lucide-react";
 import GoogleSignInButton from "./GoogleSignInButton";
-import Image from "next/image";
+import Image from 'next/image';
+import Logo from "@/public/logo500x500.png"
 
 const AuthCard = () => {
   return (
@@ -11,7 +11,7 @@ const AuthCard = () => {
         <div className="flex justify-center mb-3">
           <div className="bg-white rounded-full">  {/* Fundo branco e borda arredondada */}
             <Image 
-              src="/logo500x500.png" // Coloque aqui o caminho correto para sua logo
+              src={Logo}
               alt="Calvos Club Logo" 
               width={200} 
               height={200} 
@@ -19,8 +19,9 @@ const AuthCard = () => {
             />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-white">Calvos Club - Local de Respeito</h1>
-        <p className="text-blue-100 mt-1">Barbearia Quase Premium</p>
+        <h1 className="text-2xl font-bold text-white">B.U.B.A</h1>
+        <p className="text-white text-1xl">Local de Respeito</p>
+        <p className="text-white mt-1">Barbearia Quase Premium</p>
       </div>
       
       <div className="p-6">
@@ -33,17 +34,26 @@ const AuthCard = () => {
           <GoogleSignInButton />
           
           <div className="flex items-center justify-center mt-6">
-            <span className="text-sm text-gray-500">
-              Ao entrar, você concorda com nossos termos e políticas de privacidade
-            </span>
+          <span className="text-sm text-gray-500">
+            Ao entrar, você concorda com nossos termos 
+            <span className="mr-1">e</span>
+            <a href="/privacy-policy" className="underline text-blue-500">políticas de privacidade</a> 
+          </span>
+
           </div>
         </div>
       </div>
       
       <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-        <p className="text-center text-sm text-gray-500">
-          Precisa de ajuda? Entre em contato conosco
-        </p>
+      <a
+        href="https://wa.me/5541996235364"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-center text-sm text-blue-800 block hover:underline"
+      >
+        Precisa de ajuda? Entre em contato conosco
+      </a>
+
       </div>
     </div>
   );

@@ -1,17 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FaWhatsapp } from "react-icons/fa";
+import { MdSms } from "react-icons/md";
 import { signIn, signOut } from "next-auth/react"
 
 interface WhatsAppVerificationProps {
-  phone?: string;
+  whatsappPhone?: string;
   onVerified: (verifiedPhone: string) => void;
-  onCancel: () => void;
 }
 
-const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVerificationProps) => {
-  const [phoneNumber, setPhoneNumber] = useState(phone);
+const WhatsAppVerification = ({ whatsappPhone = "", onVerified }: WhatsAppVerificationProps) => {
+  const [phoneNumber, setPhoneNumber] = useState(whatsappPhone);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -19,28 +18,21 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
   const [countdown, setCountdown] = useState(0);
   const [codeSent, setCodeSent] = useState(false);
   const handleLogOut = async () => {
-    await signOut({ 
-      redirect: false // Don't redirect immediately
-    });
+    await signOut({ redirect: false });
   };
-  
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    
     if (countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
-    
     return () => {
       if (timer) clearTimeout(timer);
     };
   }, [countdown]);
 
   const formatPhone = (value: string) => {
-    // Remove todos os caracteres não numéricos
     const numbers = value.replace(/\D/g, "");
-    
-    // Formata o número de telefone brasileiro
     if (numbers.length <= 2) {
       return numbers;
     } else if (numbers.length <= 7) {
@@ -57,7 +49,6 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Permite apenas números e limita a 6 dígitos
     const value = e.target.value.replace(/\D/g, "").slice(0, 6);
     setCode(value);
   };
@@ -65,67 +56,51 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
   const sendVerificationCode = async () => {
     setError("");
     setLoading(true);
-    
     try {
-      // Remove todos caracteres não numéricos para enviar apenas números
       const cleanPhoneNumber = phoneNumber.replace(/\D/g, "");
-      
       const response = await fetch('/api/whatsapp/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: cleanPhoneNumber })
       });
-      
+
       const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Falha ao enviar código');
-      }
+      if (!response.ok) throw new Error(data.error || 'Falha ao enviar código');
 
       setCodeSent(true);
-      setCountdown(60); // 1 minuto até poder reenviar
+      setCountdown(60);
     } catch (error) {
       console.error("Erro ao enviar código:", error);
       setError(error instanceof Error ? error.message : "Não foi possível enviar o código de verificação. Tente novamente.");
     } finally {
       setLoading(false);
     }
-  };  
+  };
 
   const verifyCode = async () => {
     setError("");
     setVerifying(true);
-  
     try {
       const cleanPhoneNumber = phoneNumber.replace(/\D/g, "");
-  
       const response = await fetch("/api/whatsapp/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phoneNumber: cleanPhoneNumber, code }),
       });
-  
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "Código inválido");
-      }
-  
-      // Atualiza o JWT no localStorage se o token for retornado
-      if (data.token) {
-        localStorage.setItem("jwt", data.token);
-      }    
-  
-      // Notifica o componente pai que a verificação foi bem-sucedida
-      onVerified(cleanPhoneNumber);
-      handleLogOut()
-      signIn("google");
 
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Código inválido");
+
+      if (data.token) localStorage.setItem("jwt", data.token);
+
+      onVerified(cleanPhoneNumber);
+      handleLogOut();
+      signIn("google");
     } catch (error) {
       console.error("Erro ao verificar código:", error);
       setError(error instanceof Error ? error.message : "Código inválido ou expirado. Tente novamente.");
     } finally {
       setVerifying(false);
-      
     }
   }
 
@@ -133,14 +108,14 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
     <div className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden">
       <div className="bg-gray-800 p-6 text-center">
         <div className="flex justify-center mb-3">
-          <div className="bg-green-500/50 rounded-full border border-white p-4">
-            <FaWhatsapp className="w-10 h-10 text-white" />
+          <div className="bg-blue-500/50 rounded-full border border-white p-4">
+            <MdSms className="w-10 h-10 text-white" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold text-white">Verificação por WhatsApp</h1>
+        <h1 className="text-2xl font-bold text-white">Verificação por SMS</h1>
         <p className="text-blue-100 mt-1">Calvos Club • Barbearia Premium</p>
       </div>
-      
+
       <div className="p-6">
         <div className="text-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">
@@ -148,17 +123,17 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
           </h2>
           <p className="text-gray-500 mt-1">
             {codeSent 
-              ? "Enviamos um código de verificação para seu WhatsApp" 
-              : "Enviaremos um código de verificação via WhatsApp"}
+              ? "Enviamos um código de verificação via SMS" 
+              : "Enviaremos um código de verificação via SMS"}
           </p>
         </div>
-        
+
         <div className="space-y-4">
           {!codeSent ? (
             <>
               <div className="space-y-2">
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                  Número de WhatsApp
+                  Número de Celular
                 </label>
                 <input
                   type="tel"
@@ -170,7 +145,7 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
                   disabled={loading}
                 />
               </div>
-              
+
               <button
                 onClick={sendVerificationCode}
                 disabled={loading || phoneNumber.replace(/\D/g, "").length < 10}
@@ -182,7 +157,7 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <FaWhatsapp className="w-5 h-5 mr-2" />
+                  <MdSms className="w-5 h-5 mr-2" />
                 )}
                 Enviar Código
               </button>
@@ -204,7 +179,7 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
                   maxLength={6}
                 />
               </div>
-              
+
               <button
                 onClick={verifyCode}
                 disabled={verifying || code.length !== 6}
@@ -218,7 +193,7 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
                 ) : null}
                 Verificar Código
               </button>
-              
+
               <div className="text-center">
                 {countdown > 0 ? (
                   <p className="text-sm text-gray-500">
@@ -236,17 +211,25 @@ const WhatsAppVerification = ({ phone = "", onVerified, onCancel }: WhatsAppVeri
               </div>
             </>
           )}
-          
+
           {error && (
             <div className="bg-red-50 p-3 rounded-lg border border-red-200 text-red-600 text-sm">
               {error}
             </div>
           )}
-          
-          <button
-            onClick={handleLogOut}
-            className="w-full py-2 text-gray-600 hover:text-gray-800"
-          >
+
+            <button
+              onClick={() => {
+                if (codeSent) {
+                  setCodeSent(false);
+                  setCode(""); // opcional: limpa o código
+                  setError(""); // opcional: limpa mensagens de erro
+                } else {
+                  handleLogOut();
+                }
+              }}
+              className="w-full py-2 text-gray-600 hover:text-gray-800"
+            >
             Voltar
           </button>
         </div>

@@ -40,25 +40,18 @@ export const authOptions: NextAuthOptions = {
             token.isAdmin = userData.isAdmin ?? false;
             token.isBanned = userData.isBanned ?? false;
             token.whatsappVerified = userData.whatsappVerified ?? false;
-            token.phone = userData.phone || null;
+            token.whatsappPhone = userData.whatsappPhone || null;
           } else {
             token.isBanned = false;
             token.whatsappVerified = false;
-            token.phone = null;
+            token.whatsappPhone = null;
           }
         } catch (error) {
           console.error("Erro ao atualizar dados do token:", error);
           token.isBanned = false;
           token.whatsappVerified = false;
-          token.phone = null;
+          token.whatsappPhone = null;
         }
-      }
-      
-      // Se a sessão for atualizada pelo cliente
-      if (trigger === "update" && session) {
-        // Atualiza as informações no token com as novas informações da sessão
-        if (session.whatsappVerified !== undefined) token.whatsappVerified = session.whatsappVerified;
-        if (session.phone !== undefined) token.phone = session.phone;
       }
       
       return token;
@@ -66,7 +59,7 @@ export const authOptions: NextAuthOptions = {
     
     async session({ session, token }) {
       if (session?.user && token) {
-        session.user.id = token.userId as string;
+        session.user._id = token.userId as string;
         session.user.whatsappVerified = token.whatsappVerified || false;
         session.user.isBanned = token.isBanned || false;
         session.user.isAdmin = token.isAdmin || false;

@@ -3,11 +3,17 @@ import { whatsappVerificationService } from '@/lib/services/whatsappVerification
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/utils/auth";
 
+// Controle de rate limit por userId
+const rateLimitMap = new Map<string, number>();
+
 export async function POST(request: Request) {
-  // Get user session (optional - if the user is logged in)
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-  
+  const userId = session?.user?._id;
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Usuário não autenticado' }, { status: 401 });
+  }
+
   const body = await request.json();
   const { phoneNumber } = body;
 
@@ -15,9 +21,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Número de telefone inválido' }, { status: 400 });
   }
 
+  // Verificação de tempo de espera
+  const now = Date.now();
+  const lastSent = rateLimitMap.get(userId);
+  const waitTime = 30 * 1000;
+
+  if (lastSent && now - lastSent < waitTime) {
+    const secondsLeft = Math.ceil((waitTime - (now - lastSent)) / 1000);
+    return NextResponse.json(
+      { error: `Aguarde ${secondsLeft} segundos antes de tentar novamente.` },
+      { status: 429 }
+    );
+  }
+
   try {
-    // Generate and store verification code using the service
-    const phoneDisponible = await whatsappVerificationService.isPhoneDisponible(phoneNumber)
+    const phoneDisponible = await whatsappVerificationService.isPhoneDisponible(phoneNumber);
     if (!phoneDisponible) {
       return NextResponse.json({ error: 'Falha ao enviar código de verificação, telefone já cadastrado.' }, { status: 500 });
     }
@@ -26,29 +44,46 @@ export async function POST(request: Request) {
       phoneNumber,
       userId
     );
-    
-    // Initialize Twilio client
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const client = require('twilio')(accountSid, authToken);
 
-    // Format the phone number for international dialing (assuming Brazilian number)
-    const formattedPhone = `+55${phoneNumber}`;
-    const message = `Seu código de verificação do Calvos Club é: ${verificationCode}`
-    
-    //const response = await client.messages.create({to: '+5569999155652',from: '+15708026808', body: message}).then(message => console.log(message.sid));
+    const formattedPhone = `55${phoneNumber}`;
 
-    // Send the WhatsApp message with the verification code
-    const response = await client.messages.create({
-      from: 'whatsapp:+14155238886',  // Your Twilio WhatsApp number
-      body: `Seu código de verificação do Calvos Club é: ${verificationCode}`,
-      to: `whatsapp:${formattedPhone}`
+    const infobipApiKey = process.env.INFOBIP_API_KEY!;
+    const infobipBaseUrl = process.env.INFOBIP_BASE_URL!;
+    const infobipSender = process.env.INFOBIP_SENDER_ID!;
+
+    const payload = {
+      messages: [
+        {
+          destinations: [{ to: formattedPhone }],
+          from: infobipSender,
+          text: `Barbaria Universitária Barba Azul. Seu código de verificação é: ${verificationCode}`
+        }
+      ]
+    };
+
+    const response = await fetch(`${infobipBaseUrl}/sms/2/text/advanced`, {
+      method: "POST",
+      headers: {
+        Authorization: `App ${infobipApiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
     });
 
-    console.log("WhatsApp message sent:", response.sid);
+    if (!response.ok) {
+      const errorResponse = await response.text();
+      console.error("Erro na resposta da Infobip (SMS):", errorResponse);
+      return NextResponse.json({ error: 'Erro ao enviar SMS via Infobip' }, { status: 500 });
+    }
+
+    // Atualiza o tempo do último envio
+    rateLimitMap.set(userId, Date.now());
+
+    console.log("SMS enviado com sucesso via Infobip");
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error sending WhatsApp verification:', error);
+    console.error('Erro ao enviar código de verificação via SMS:', error);
     return NextResponse.json({ error: 'Falha ao enviar código de verificação' }, { status: 500 });
   }
 }

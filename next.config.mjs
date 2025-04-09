@@ -1,10 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverActions: true,
-    serverComponentsExternalPackages: ["mongoose"],
+    serverActions: {}, 
   },
-  // I'm removing output: 'export' as recommended since your app uses server features
+  serverExternalPackages: ["mongoose"], 
 };
 
 export default nextConfig;

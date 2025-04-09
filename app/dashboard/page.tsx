@@ -22,6 +22,8 @@ import { isPartOfConsecutiveGroup, isUserReservation } from "@/lib/utils/slotUti
 import { formatDate, isWeekend } from "@/lib/utils/dateUtils";
 import { useEffect } from "react";
 
+import Logo from "@/public/logo500x500.png"
+
 const WhatsAppButton = () => {
   const whatsappNumber = "+554196235364"; // Exemplo: número com DDD e número
   const message = "Olá, gostaria de mais informações sobre o agendamento.";
@@ -93,7 +95,7 @@ const ScheduleApp = () => {
 
   // Função de verificação de propriedade do horário
   const checkIsUserReservation = (slot: any) => {
-    return isUserReservation(slot, session?.user?.id);
+    return isUserReservation(slot, session?.user?._id);
   };
 
   // Função para verificar se o slot faz parte de um grupo consecutivo

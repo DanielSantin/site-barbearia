@@ -4,7 +4,6 @@ import Image from 'next/image';
 const Header = () => {
   return (
     <div className="text-center mb-6 flex flex-col items-center">
-      {/* Logo com tamanho reduzido e efeitos */}
       <div className="relative w-28 h-28 mb-2 overflow-hidden bg-white rounded-full">
         <div className="bg-white rounded-full">  {/* Fundo branco e borda arredondada */}
           <Image

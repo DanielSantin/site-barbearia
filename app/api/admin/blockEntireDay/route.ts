@@ -14,17 +14,18 @@ export async function POST(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db();
     const dbAuth = client.db("auth");
 
     // Verificar se é admin
-    const userId = session.user.id;
+    const userId = session.user._id;
     const userCollection = dbAuth.collection("users");
     const user = await userCollection.findOne({ _id: new ObjectId(userId) });
-    
+
     if (!user?.isAdmin) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
+
+    const db = client.db();
 
     const { date, service } = await req.json();
 

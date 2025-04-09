@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const dbAuth = client.db("auth");
 
     // Verificar se é admin
-    const acessUserId = session.user.id;
+    const acessUserId = session.user._id;
     const userCollection = dbAuth.collection("users");
     const user = await userCollection.findOne({ _id: new ObjectId(acessUserId) });
     
@@ -132,7 +132,7 @@ export async function DELETE(req: Request) {
     const dbAuth = client.db("auth");
 
     // Verificar se é admin
-    const userId = session.user.id;
+    const userId = session.user._id;
     const userCollection = dbAuth.collection("users");
     const user = await userCollection.findOne({ _id: new ObjectId(userId) });
     

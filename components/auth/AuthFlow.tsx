@@ -61,9 +61,8 @@ const AuthFlow = () => {
   if (step === "verification" && status === "authenticated") {
     return (
       <WhatsAppVerification
-        phone={session?.user?.phone || ""}
+        whatsappPhone={session?.user?.whatsappPhone || ""}
         onVerified={handleVerificationComplete}
-        onCancel={handleCancel}
       />
     );
   }

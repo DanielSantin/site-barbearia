@@ -37,7 +37,7 @@ export async function GET(req: Request) {
     const dbAuth = client.db("auth");
 
     // Verificar se o usuário autenticado é admin
-    const adminId = session.user.id;
+    const adminId = session.user._id;
     const userCollection = dbAuth.collection("users");
     const adminUser = await userCollection.findOne({ _id: new ObjectId(adminId) });
     

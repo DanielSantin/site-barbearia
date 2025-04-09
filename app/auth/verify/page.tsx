@@ -51,9 +51,8 @@ export default function WppPage() {
     return (    
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black p-4">
             <WhatsAppVerification
-                phone={session?.user?.phone || ""}
+                whatsappPhone={session?.user?.whatsappPhone || ""}
                 onVerified={handleVerificationComplete}
-                onCancel={handleCancel}
             />
         </div>
     );
