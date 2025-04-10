@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
 
 import { TimeSlot } from "@/models/types";
+import { logUserAction } from '@/lib/services/logService';
 
 // Variável de ambiente para controlar restrição de admin
 // Precisa ser definida como "true" no ambiente de desenvolvimento
@@ -59,37 +60,6 @@ function isDateMoreThanThreeMonthsAhead(dateStr: string): boolean {
   return selectedDate > threeMonthsLater;
 }
 
-// Função para registrar ações no log
-async function logUserAction(
-  db: any,
-  userId: string,
-  userName: string,
-  actionType: 'reservation' | 'cancellation',
-  date: string,
-  time: string,
-  service?: string,
-  importance: 'normal' | 'important' = 'normal',
-  additionalInfo?: string
-) {
-  try {
-    const logsCollection = db.collection("userActionLogs");
-    
-    await logsCollection.insertOne({
-      userId,
-      userName,
-      actionType,
-      date,
-      time,
-      service,
-      importance,
-      additionalInfo,
-      timestamp: new Date()
-    });
-    
-  } catch (error) {
-    console.error("Erro ao registrar log:", error);
-  }
-}
 
 async function incrementStrikeForUser(client: any, userId: string, incrementValue: number = 1) {
   const dbAuth = client.db("auth");
@@ -347,18 +317,16 @@ export async function POST(req: Request) {
       { $set: { timeSlots: updatedTimeSlots } }
     );
     
-    // Registrar log da reserva
-    await logUserAction(
-      db,
-      session.user._id,
-      session.user.name || "Usuário",
-      'reservation',
-      date,
-      selectedTimeSlot.time,
-      service || "Não especificado",
-      'normal',
-      `Reserva realizada com sucesso para o dia ${date} às ${selectedTimeSlot.time}`
-    );
+    await logUserAction({
+      userId: session.user._id,
+      userName: session.user.name || "Usuário",
+      actionType: 'reservation',
+      date: date,
+      time: selectedTimeSlot.time,
+      service: service || "Não especificado",
+      importance: 'normal',
+      additionalInfo: `Reserva realizada com sucesso para o dia ${date} às ${selectedTimeSlot.time}`
+    });
         
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -472,20 +440,18 @@ export async function DELETE(req: Request) {
         } 
       }
     );
-    
-    // Registrar log do cancelamento
-    await logUserAction(
-      db,
-      userId,
-      session.user.name || "Usuário",
-      'cancellation',
-      date,
-      targetTimeSlot.time,
-      targetTimeSlot.service,
-      logImportance,
-      additionalInfo
-    );
 
+    await logUserAction({
+      userId: session.user._id,
+      userName: session.user.name || "Usuário",
+      actionType: 'cancellation',
+      date: date,
+      time: targetTimeSlot.time,
+      service: targetTimeSlot.service || "Não especificado",
+      importance: logImportance,
+      additionalInfo: additionalInfo
+    });
+    
     // Buscar dados atualizados
     const updatedSchedule = await schedulesCollection.findOne({ date });
     return NextResponse.json({
