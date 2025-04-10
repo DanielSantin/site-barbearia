@@ -4,14 +4,18 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
 const { ObjectId } = require("mongodb");
 
-import { TimeSlot } from "@/models/types"
+import { TimeSlot } from "@/models/types";
+
+// Variável de ambiente para controlar restrição de admin
+// Precisa ser definida como "true" no ambiente de desenvolvimento
+const DEV_MODE = process.env.DEV_MODE === "true";
 
 // Função para criar horários padrão entre 13:00 e 18:00
 const createDefaultTimeSlots = () => {
   const timeSlots = [];
   for (let hour = 10; hour <= 11; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push  ({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
+      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
     }
   }
   for (let hour = 13; hour <= 19; hour++) {
@@ -40,6 +44,19 @@ function isTimeSlotPassed(date: string, timeSlot: any): boolean {
   const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
   return now > slotDate;
+}
+
+// Função para verificar se a data está mais de 3 meses à frente
+function isDateMoreThanThreeMonthsAhead(dateStr: string): boolean {
+  const today = new Date();
+  const selectedDate = new Date(dateStr);
+  
+  // Adiciona 3 meses à data atual
+  const threeMonthsLater = new Date(today);
+  threeMonthsLater.setMonth(today.getMonth() + 3);
+  
+  // Compara se a data selecionada é posterior a 3 meses a partir de hoje
+  return selectedDate > threeMonthsLater;
 }
 
 // Função para registrar ações no log
@@ -78,7 +95,6 @@ async function incrementStrikeForUser(client: any, userId: string, incrementValu
   const dbAuth = client.db("auth");
   const userCollection = dbAuth.collection("users");
 
-
   try {
     // Converte userId para ObjectId caso não seja
     const objectId = new ObjectId(userId);
@@ -113,7 +129,6 @@ async function incrementStrikeForUser(client: any, userId: string, incrementValu
   }
 }
 
-
 // Função para verificar se um horário está próximo (menos de 30 minutos)
 function isTimeSlotSoon(date: string, timeSlot: any): boolean {
   if (!timeSlot || !timeSlot.time) {
@@ -126,7 +141,6 @@ function isTimeSlotSoon(date: string, timeSlot: any): boolean {
 
   const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
   const thirtyMinutesFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-
   return slotDate <= thirtyMinutesFromNow && slotDate > now;
 }
 
@@ -193,14 +207,13 @@ export async function GET(req: Request) {
     }
     
     // Calcula a data/hora de 30 minutos no futuro
-    const now = new Date();
-    const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
-
+    const now = (new Date()).getTime() - 3 * 60 * 60 * 1000 ;
+    const thirtyMinutesFromNow = new Date(now + 30 * 60 * 1000).getTime();
     // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
       const updatedTimeSlots = schedule.timeSlots.map((slot: TimeSlot) => {
         // Criar um objeto Date para o horário do slot
-        const slotDateTime = new Date(`${selectedDate}T${slot.time}`);
+        const slotDateTime = new Date(`${selectedDate}T${slot.time}`).getTime();
         if (slotDateTime < thirtyMinutesFromNow) {
           return {
             ...slot,
@@ -229,7 +242,6 @@ export async function GET(req: Request) {
 // Reserva um horário
 export async function POST(req: Request) {
   try {
-
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -238,19 +250,28 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const dbAuth = client.db("auth");
 
-    // Verificar se é admin
-    const userId = session.user._id;
-    const userCollection = dbAuth.collection("users");
-    const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+    // Verificar se é admin apenas no modo desenvolvimento
+    if (DEV_MODE) {
+      const userId = session.user._id;
+      const userCollection = dbAuth.collection("users");
+      const user = await userCollection.findOne({ _id: new ObjectId(userId) });
 
-    if (!user?.isAdmin) {
-      return NextResponse.json({ error: "A reserva está desabilitada temporariamente. Entre em contato via whatsapp." }, { status: 403 });
+      if (!user?.isAdmin) {
+        return NextResponse.json({ error: "A reserva está desabilitada temporariamente no ambiente de desenvolvimento. Entre em contato via whatsapp." }, { status: 403 });
+      }
     }
 
     const { date, timeSlotIndex, service } = await req.json();
     
     if (!date || timeSlotIndex === undefined) {
       return NextResponse.json({ error: "Dados de reserva incompletos" }, { status: 400 });
+    }
+
+    // Verificar se a data está a mais de 3 meses de distância
+    if (isDateMoreThanThreeMonthsAhead(date)) {
+      return NextResponse.json({ 
+        error: "Não é possível fazer reservas com mais de 3 meses de antecedência" 
+      }, { status: 400 });
     }
     
     const db = client.db();
@@ -436,8 +457,6 @@ export async function DELETE(req: Request) {
     } else {
       additionalInfo = `Cancelamento realizado com sucesso para o dia ${formattedDate} às ${targetTimeSlot.time}`
     }
-
-
 
     // Tudo verificado, cancelar a reserva
     await schedulesCollection.updateOne(
