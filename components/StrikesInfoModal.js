@@ -47,13 +47,13 @@ const StrikesInfoModal = ({ onClose, strikes }) => {
           <div className="w-full bg-gray-700 rounded-full h-2.5">
             <div 
               className={`h-2.5 rounded-full ${
-                strikes >= 3 ? 'bg-red-500' : 'bg-yellow-500'
+                strikes >= 5 ? 'bg-red-500' : 'bg-yellow-500'
               }`} 
               style={{ width: `${Math.min(strikes / 5 * 100, 100)}%` }}
             ></div>
           </div>
 
-          {strikes >= 3 && (
+          {strikes >= 5 && (
             <p className="mt-2 text-sm text-red-400">
               Você atingiu o limite de strikes! Sua conta está temporariamente bloqueada para novas reservas.
             </p>

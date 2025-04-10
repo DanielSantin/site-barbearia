@@ -6,7 +6,6 @@ const { ObjectId } = require("mongodb");
 
 import { TimeSlot } from "@/models/types";
 import { logUserAction } from '@/lib/services/logService';
-import { json } from "stream/consumers";
 
 // Variável de ambiente para controlar restrição de admin
 // Precisa ser definida como "true" no ambiente de desenvolvimento
@@ -133,7 +132,7 @@ export async function GET(req: Request) {
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
       if (user?.isBanned == true){
-        return NextResponse.json({ error: "Usuário temporariamente banido" }, { status: 400 }); 
+        return NextResponse.json({ error: "Erro ao buscar horáros. Usuário banido temporariamente." }, { status: 403 });
       }
     } else {
       return NextResponse.json({ error: "Você precisa estar logado para ver as reservas" }, { status: 400 }); 

@@ -70,7 +70,6 @@ const ScheduleApp = () => {
     consecutiveGroups,
     isLoading,
     firstLoading,
-    errorMessage,
     showCancelDialog,
     showPixInfo,
     showStrikesInfo,
