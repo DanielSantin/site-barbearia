@@ -89,12 +89,6 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
         className={`rounded-lg mb-4 overflow-hidden ${bgColorClass}`}
         onClick={() => setExpandedSlot(isExpanded ? null : index)}
       >
-        {isCurrentTimeSlot && (
-          <div 
-            className="absolute left-0 right-0 h-1 bg-red-500 z-10" 
-            style={{ top: '50%', transform: 'translateY(-50%)' }}
-          />
-        )}
         <div className="p-4 flex justify-between items-center font-semibold text-gray-100">
           <div className="flex items-center space-x-2">
             {getServiceIcon(slot.service)}
