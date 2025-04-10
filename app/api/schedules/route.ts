@@ -6,6 +6,7 @@ const { ObjectId } = require("mongodb");
 
 import { TimeSlot } from "@/models/types";
 import { logUserAction } from '@/lib/services/logService';
+import { json } from "stream/consumers";
 
 // Variável de ambiente para controlar restrição de admin
 // Precisa ser definida como "true" no ambiente de desenvolvimento
@@ -128,7 +129,7 @@ export async function GET(req: Request) {
     const selectedDate = searchParams.get("date"); 
 
     if (session) {
-      const userId = session.user?.id;
+      const userId = session.user?._id;
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
       if (user?.isBanned == true){
