@@ -177,7 +177,7 @@ export async function GET(req: Request) {
     }
     
     // Calcula a data/hora de 30 minutos no futuro
-    const now = (new Date()).getTime() - 3 * 60 * 60 * 1000 ;
+    const now = (new Date()).getTime()
     const thirtyMinutesFromNow = new Date(now + 30 * 60 * 1000).getTime();
     // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
