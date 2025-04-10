@@ -132,7 +132,7 @@ export async function GET(req: Request) {
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
       if (user?.isBanned == true){
-        return NextResponse.json({ error: "Erro ao buscar horáros. Usuário banido temporariamente." }, { status: 403 });
+        return NextResponse.json({ error: "Erro ao buscar horáros. Usuário banido temporariamente." }, { status: 401 });
       }
     } else {
       return NextResponse.json({ error: "Você precisa estar logado para ver as reservas" }, { status: 400 }); 
