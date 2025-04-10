@@ -57,7 +57,7 @@ export default function DatePicker({ label, onChange, value, obfuscateOldDates =
           value={date}
           onChange={handleChange}
           min={minDate}
-          className="p-4 pr-12 border border-gray-700 rounded-lg text-xl w-full text-center focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-900 text-gray-200 shadow-md cursor-pointer hover:border-blue-400 transition-all duration-200"
+          className="p-4 pr-12 border border-gray-700 rounded-lg text-xl w-full text-center focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-gray-900 text-gray-200 shadow-md cursor-pointer hover:border-blue-400 transition-all duration-200"
         />
         
         {/* Ícone personalizado sobreposto */}

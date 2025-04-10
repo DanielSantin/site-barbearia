@@ -95,14 +95,14 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
           }`}>
             {/* Detailed Log Information */}
             <div className="space-y-3">
-              <div className="bg-gray-700 rounded p-3">
+              <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Data/Hora:</span>
                 <span className="text-gray-100 font-medium">
                   {new Date(log.timestamp).toLocaleString('pt-BR')}
                 </span>
               </div>
 
-              <div className="bg-gray-700 rounded p-3">
+              <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Usuário:</span>
                 <span className="text-gray-100 font-medium">
                   {log.userName ? (
@@ -120,21 +120,21 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                 </span>
               </div>
               
-              <div className="bg-gray-700 rounded p-3">
+              <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Detalhes:</span>
                 <span className="text-gray-100 font-medium break-words">
                   {log.additionalInfo || '-'}
                 </span>
               </div>
 
-              <div className="bg-gray-700 rounded p-3">
+              <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Tipo de Ação:</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActionTypeClass(log.actionType)}`}>
                   {actionTypeLabel}
                 </span>
               </div>
 
-              <div className="bg-gray-700 rounded p-3">
+              <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Importância:</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium 
                   ${log.importance === 'important' ? 'bg-yellow-100/90 text-yellow-800' : 'bg-gray-100/90 text-gray-800'}`}>
@@ -151,7 +151,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
   return (
     <div className="space-y-6">
       {/* Log Summary Section */}
-      <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
+      <div className="p-4 bg-gray-800 rounded-lg shadow-sm text-gray-200">
         <h2 className="text-xl font-semibold mb-4">Resumo de Logs</h2>
         {logSummary ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -178,19 +178,19 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
       </div>
 
       {/* Filters Section */}
-      <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
+      <div className="p-4 bg-gray-800 rounded-lg shadow-sm text-gray-200">
         <div className="flex flex-wrap items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Filtros</h2>
           <div className="flex space-x-2">
             <button
               onClick={resetLogFilters}
-              className="px-3 py-1 text-sm bg-gray-600 text-gray-200 rounded hover:bg-gray-500"
+              className="px-3 py-1 text-sm bg-gray-600 text-gray-200 rounded-sm hover:bg-gray-500"
             >
               Limpar Filtros
             </button>
             <button
               onClick={() => clearOldLogs(30)}
-              className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+              className="px-3 py-1 text-sm bg-red-600 text-white rounded-sm hover:bg-red-700"
             >
               Limpar Logs de mais de 30 dias
             </button>
@@ -201,7 +201,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
         <div className="block md:hidden mb-4">
           <button
             onClick={() => setExpandedFilters(!expandedFilters)}
-            className="w-full bg-gray-700 text-gray-200 px-3 py-2 rounded flex justify-between items-center"
+            className="w-full bg-gray-700 text-gray-200 px-3 py-2 rounded-sm flex justify-between items-center"
           >
             Filtros
             <svg 
@@ -221,7 +221,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   name="importance"
                   value={logFilters.importance}
                   onChange={handleFilterChange}
-                  className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
                 >
                   <option value="">Todos</option>
                   <option value="normal">Normal</option>
@@ -234,7 +234,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   name="actionType"
                   value={logFilters.actionType}
                   onChange={handleFilterChange}
-                  className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
                 >
                   <option value="">Todos</option>
                   <option value="reservation">Reserva</option>
@@ -250,7 +250,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   name="startDate"
                   value={logFilters.startDate}
                   onChange={handleFilterChange}
-                  className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
                 />
               </div>
               <div>
@@ -260,12 +260,12 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   name="endDate"
                   value={logFilters.endDate}
                   onChange={handleFilterChange}
-                  className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+                  className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
                 />
               </div>
               <button
                 onClick={applyLogFilters}
-                className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+                className="w-full bg-blue-600 text-white px-3 py-2 rounded-sm text-sm hover:bg-blue-700"
               >
                 Aplicar Filtros
               </button>
@@ -281,7 +281,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
               name="importance"
               value={logFilters.importance}
               onChange={handleFilterChange}
-              className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+              className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
             >
               <option value="">Todos</option>
               <option value="normal">Normal</option>
@@ -294,7 +294,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
               name="actionType"
               value={logFilters.actionType}
               onChange={handleFilterChange}
-              className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+              className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
             >
               <option value="">Todos</option>
               <option value="reservation">Reserva</option>
@@ -310,7 +310,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
               name="startDate"
               value={logFilters.startDate}
               onChange={handleFilterChange}
-              className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+              className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
             />
           </div>
           <div>
@@ -320,13 +320,13 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
               name="endDate"
               value={logFilters.endDate}
               onChange={handleFilterChange}
-              className="w-full border border-gray-600 rounded px-3 py-2 text-sm bg-gray-700 text-gray-200"
+              className="w-full border border-gray-600 rounded-sm px-3 py-2 text-sm bg-gray-700 text-gray-200"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={applyLogFilters}
-              className="w-full bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700"
+              className="w-full bg-blue-600 text-white px-3 py-2 rounded-sm text-sm hover:bg-blue-700"
             >
               Aplicar Filtros
             </button>
@@ -335,7 +335,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
       </div>
 
       {/* Logs Section */}
-      <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-300">
+      <div className="p-4 bg-gray-800 rounded-lg shadow-sm text-gray-300">
         <h2 className="text-xl font-semibold mb-4">Logs de Atividades</h2>
         
         {isLoadingLogs ? (

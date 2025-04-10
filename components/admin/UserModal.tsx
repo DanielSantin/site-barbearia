@@ -164,13 +164,13 @@ const UserModal: React.FC<UserModalProps> = ({
                     <div className="flex justify-between">
                         <button
                             onClick={() => toggleUserBan(selectedUser._id, selectedUser.isBanned || false)}
-                            className={`${selectedUser.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-4 py-2 rounded`}
+                            className={`${selectedUser.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-4 py-2 rounded-sm`}
                         >
                             {selectedUser.isBanned ? "Desbloquear Usuário" : "Bloquear Usuário"}
                         </button>
                         <button
                             onClick={() => setShowUserModal(false)}
-                            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-500"
+                            className="bg-gray-600 text-white px-4 py-2 rounded-sm hover:bg-gray-500"
                         >
                             Fechar
                         </button>

@@ -441,7 +441,7 @@ export default function AdminPage() {
     );
   }
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-b from-gray-900 to-black">
+    <div className="min-h-screen p-6 bg-linear-to-b from-gray-900 to-black">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-100 mb-6">
           Painel do Administrador

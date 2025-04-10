@@ -106,7 +106,7 @@ const ScheduleApp = () => {
   console.log(session)
 
   return (
-    <div className="bg-gradient-to-b from-gray-900 to-black min-h-screen">
+    <div className="bg-linear-to-b from-gray-900 to-black min-h-screen">
     <div className="max-w-lg mx-auto p-6 bg-gray-800 rounded-xl shadow-lg relative">
       {session?.user.isAdmin && (
       <div className="absolute top-4 left-4">

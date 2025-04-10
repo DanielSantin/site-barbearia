@@ -26,14 +26,14 @@ export default function LoginPage() {
     // Mostra um loader enquanto verifica o status da sessão
     if (status === "loading") {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black">
+        <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-gray-900 to-black">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
         </div>
       );
     }
     
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-900 to-black p-4">
+        <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-gray-900 to-black p-4">
             <AuthCard />
         </div>
 

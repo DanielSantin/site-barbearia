@@ -40,7 +40,7 @@ const PixInfoModal = ({ onClose, pixKey, fee, onCopy }) => {
               type="text"
               readOnly
               value={pixKey}
-              className="flex-grow px-4 py-2 border border-gray-700 rounded-l-md bg-gray-900 text-gray-300"
+              className="grow px-4 py-2 border border-gray-700 rounded-l-md bg-gray-900 text-gray-300"
             />
             <button
               onClick={onCopy}

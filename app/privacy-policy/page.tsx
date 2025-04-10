@@ -6,7 +6,7 @@ import Link from "next/link";
 
 const PrivacyPolicy = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black py-10 px-4">
+    <div className="min-h-screen bg-linear-to-b from-gray-900 to-black py-10 px-4">
       <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-xl">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Política de Privacidade</h1>
 

@@ -169,7 +169,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       e.stopPropagation();
                       blockTimeSlot(selectedDate, index);
                     }}
-                    className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                    className="bg-yellow-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-yellow-700"
                   >
                     Bloquear
                   </button>
@@ -179,7 +179,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       e.stopPropagation();
                       unblockTimeSlot(selectedDate, index);
                     }}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                    className="bg-green-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-green-700"
                   >
                     Desbloquear
                   </button>
@@ -189,7 +189,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       e.stopPropagation();
                       removeClientReservation(selectedDate, index);
                     }}
-                    className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                    className="bg-red-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-red-700"
                   >
                     Remover Reserva
                   </button>
@@ -200,7 +200,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
             {slot.isPast ? (
               <div className="flex justify-center space-x-2 mt-4">
                   <button 
-                    className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                    className="bg-gray-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-red-700"
                     disabled={true}
                   >
                     Ação Indispoível
@@ -215,7 +215,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
 
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg shadow mb-6">
+    <div className="p-4 bg-gray-800 rounded-lg shadow-sm mb-6">
       {/* Mantenha o cabeçalho existente */}
       <div className="flex flex-wrap items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-100">
@@ -227,11 +227,11 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
             value={blockingService}
             onChange={(e) => setBlockingService(e.target.value)}
             placeholder="Motivo do bloqueio"
-            className="border border-gray-600 bg-gray-700 text-gray-200 rounded px-3 py-1 text-sm"
+            className="border border-gray-600 bg-gray-700 text-gray-200 rounded-sm px-3 py-1 text-sm"
           />
           <button
             onClick={() => blockEntireDay(selectedDate)}
-            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+            className="bg-red-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-red-700"
           >
             Bloquear Dia
           </button>
@@ -300,21 +300,21 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       {!slot.booked ? (
                         <button
                           onClick={() => blockTimeSlot(selectedDate, index)}
-                          className="bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700 mr-2"
+                          className="bg-yellow-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-yellow-700 mr-2"
                         >
                           Bloquear
                         </button>
                       ) : !slot.userId ? (
                         <button
                           onClick={() => unblockTimeSlot(selectedDate, index)}
-                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                          className="bg-green-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-green-700"
                         >
                           Desbloquear
                         </button>
                       ) : (
                         <button
                           onClick={() => removeClientReservation(selectedDate, index)}
-                          className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                          className="bg-green-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-green-700"
                         >
                           Remover Reserva
                         </button>
@@ -325,7 +325,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                   {slot.isPast ? (
                     <>
                       <button 
-                          className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
+                          className="bg-gray-600 text-white px-3 py-1 rounded-sm text-sm"
                           disabled={true}
                       >
                         Ação Indispoível

@@ -36,7 +36,7 @@ const UsersManagement: React.FC<UsersManagementProps> = ({
   };
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg shadow text-gray-200">
+    <div className="p-4 bg-gray-800 rounded-lg shadow-sm text-gray-200">
       <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
       
       {/* Mobile Layout */}
@@ -78,14 +78,14 @@ const UsersManagement: React.FC<UsersManagementProps> = ({
                 <td className="py-2 px-4">
                   <button
                     onClick={() => handleUserClick(user)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 mr-2"
+                    className="bg-blue-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-blue-700 mr-2"
                   >
                     Ver Detalhes
                   </button>
                   {toggleUserBan && (
                     <button
                       onClick={() => toggleUserBan(user._id, user.isBanned || false)}
-                      className={`${user.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-3 py-1 rounded text-sm`}
+                      className={`${user.isBanned ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"} text-white px-3 py-1 rounded-sm text-sm`}
                     >
                       {user.isBanned ? "Desbloquear" : "Bloquear"}
                     </button>

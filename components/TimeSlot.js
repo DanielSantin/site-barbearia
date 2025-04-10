@@ -46,7 +46,7 @@ const TimeSlot = ({
               : "bg-red-900 border border-red-800" 
             : isConsecutiveStart
               ? "bg-gray-900 border border-indigo-700" 
-              : "bg-gray-900 border border-gray-700 hover:border-indigo-600 hover:shadow"
+              : "bg-gray-900 border border-gray-700 hover:border-indigo-600 hover:shadow-sm"
       }`}
     >
       <p className="text-center font-medium mb-2 text-gray-300">

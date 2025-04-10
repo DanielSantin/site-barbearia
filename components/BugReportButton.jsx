@@ -60,7 +60,7 @@ export default function BugReportButton() {
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     rows={5}
                     placeholder="Explique o bug com o máximo de detalhes possível..."
                     required
