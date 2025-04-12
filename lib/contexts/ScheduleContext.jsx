@@ -38,8 +38,8 @@ export const ScheduleProvider = ({ children }) => {
   const { userStrikes, updateStrikes } = useStrikes();
   
   // Constantes
-  const PIX_KEY = "000.000.000-00";
-  const CANCELATION_FEE = 20.00;
+  const PIX_KEY = process.env.PIX_KEY || "000.000.000-00";
+  const CANCELATION_FEE = process.env.CANCELATION_FEE || 20.00;
   
   const handleOptionChange = (option) => {
     setSelectedOption(option);
