@@ -4,7 +4,7 @@ import clientPromise from "../utils/db";
 /**
  * Tipos de ação que podem ser registradas nos logs
  */
-export type ActionType = 'reservation' | 'cancellation' | 'login' | 'logout' | 'profile_update' | "report";
+export type ActionType = 'reservation' | 'cancellation' | 'login' | 'logout' | 'profile_update' | "Report";
 
 /**
  * Nível de importância do log

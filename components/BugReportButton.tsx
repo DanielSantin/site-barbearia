@@ -1,22 +1,49 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Bug, X, Send } from 'lucide-react';
 
+
 export default function BugReportButton() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [description, setDescription] = useState('');
-  const [successMessage, setSuccessMessage] = useState(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [description, setDescription] = useState<string>('');
+  const [successMessage, setSuccessMessage] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // Simulação de envio de relatório de bug
-    setTimeout(() => {
-      setSuccessMessage(true);
-      setTimeout(() => {
-        setIsOpen(false);
-        setDescription('');
-        setSuccessMessage(false);
-      }, 2000);
-    }, 500);
+    setIsSubmitting(true);
+    setError('');
+    
+    try {
+      // Chamada real para a API
+      const response = await fetch('/api/user/report-bug', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setSuccessMessage(true);
+        setTimeout(() => {
+          setIsOpen(false);
+          setDescription('');
+          setSuccessMessage(false);
+        }, 2000);
+      } else {
+        setError(data.message || 'Erro ao enviar o report. Tente novamente.');
+      }
+    } catch (err) {
+      setError('Falha na conexão. Verifique sua internet e tente novamente.');
+      console.error('Erro ao enviar report:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -66,20 +93,39 @@ export default function BugReportButton() {
                     required
                   />
                 </div>
+                {error && (
+                  <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-lg text-red-200 text-sm">
+                    {error}
+                  </div>
+                )}
                 <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => setIsOpen(false)}
                     className="px-4 py-2 mr-3 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                    disabled={isSubmitting}
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 rounded-md transition-colors"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-700 hover:bg-blue-600 rounded-md transition-colors disabled:bg-blue-900 disabled:opacity-70"
                   >
-                    <Send size={16} />
-                    Enviar
+                    {isSubmitting ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Enviando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Enviar</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>

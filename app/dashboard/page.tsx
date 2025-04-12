@@ -22,8 +22,6 @@ import { isPartOfConsecutiveGroup, isUserReservation } from "@/lib/utils/slotUti
 import { formatDate, isWeekend } from "@/lib/utils/dateUtils";
 import { useEffect } from "react";
 
-import Logo from "@/public/logo500x500.png"
-
 const WhatsAppButton = () => {
   const whatsappNumber = "+554196235364"; // Exemplo: número com DDD e número
   const message = "Olá, gostaria de mais informações sobre o agendamento.";
@@ -128,7 +126,7 @@ const ScheduleApp = () => {
       <DateSelectionSection 
         onChange={handleDateChange} 
         selectedDate={selectedDate} // Add this prop
-      />      
+      />
       
       <ServiceSelection 
         selectedOption={selectedOption} 

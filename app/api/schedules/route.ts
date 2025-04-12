@@ -29,7 +29,8 @@ const createDefaultTimeSlots = () => {
 
 const isWeekend = (date: string | number | Date) => {
   const dayOfWeek = new Date(date).getDay();
-  return dayOfWeek === 0 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
+  console.log(dayOfWeek)
+  return dayOfWeek === 5 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
 };
 
 function isTimeSlotPassed(date: string, timeSlot: any): boolean {

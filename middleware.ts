@@ -18,7 +18,8 @@ export async function middleware(request: NextRequest) {
     path.startsWith('/api/auth') ||
     path.startsWith('/static') ||
     path === '/' ||
-    path === '/privacy-policy';
+    path === '/privacy-policy' ||
+    path == '/api/user/report-bug'
 
   if (isAuthenticated && !hasVerifiedPhone && !isPublicPath && !isWhatsappVerificationApi) {
     return NextResponse.redirect(new URL('/auth/verify', request.url));
