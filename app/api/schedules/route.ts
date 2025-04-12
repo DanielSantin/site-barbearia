@@ -146,9 +146,9 @@ export async function GET(req: Request) {
       return NextResponse.json([]); 
     }
 
-    let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
  
-    if (schedules.length === 0) { 
+    let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
+    if (schedules.length === 0 && !isWeekend(selectedDate)) { 
       // Não existe agendamento para esta data, criar um novo
       await schedulesCollection.updateOne( 
         { date: selectedDate }, 
@@ -156,24 +156,6 @@ export async function GET(req: Request) {
         { upsert: true } 
       ); 
       schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
-    } else {
-      // Verificar se os slots existentes têm a propriedade "time"
-      const hasInvalidTimeSlots = schedules.some(schedule => 
-        schedule.timeSlots.some((slot: TimeSlot) => !slot.time)
-      );
-      
-      // Se encontrou slots sem propriedade "time", recria os slots
-      if (hasInvalidTimeSlots) {
-        await Promise.all(schedules.map(schedule => 
-          schedulesCollection.updateOne(
-            { date: schedule.date },
-            { $set: { timeSlots: createDefaultTimeSlots() } }
-          )
-        ));
-        
-        // Busca os dados atualizados
-        schedules = await schedulesCollection.find({ date: selectedDate }).toArray();
-      }
     }
     
     // Calcula a data/hora de 30 minutos no futuro

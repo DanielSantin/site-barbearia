@@ -2,6 +2,7 @@ import clientPromise from "@/lib/utils/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
+import { isWeekend, createDefaultTimeSlots } from "@/lib/utils/dateUtils"
 const { ObjectId } = require("mongodb");
 
 interface TimeSlot {
@@ -21,28 +22,6 @@ interface Schedule {
   date: string;
   timeSlots: TimeSlot[];
 }
-
-
-// Função para criar horários padrão entre 13:00 e 18:00
-const createDefaultTimeSlots = () => {
-  const timeSlots = [];
-  for (let hour = 10; hour <= 11; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push  ({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
-    }
-  }
-  for (let hour = 13; hour <= 19; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
-    }
-  }
-  return timeSlots;
-};
-
-const isWeekend = (date: string | number | Date) => {
-  const dayOfWeek = new Date(date).getDay();
-  return dayOfWeek === 0 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
-};
 
 // Busca os horários disponíveis para os próximos 5 dias
 export async function GET(req: Request) { 
@@ -81,13 +60,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Data não fornecida" }, { status: 400 }); 
     } 
 
-    if (isWeekend(selectedDate)) {
-      return NextResponse.json([]); 
-    }
+
 
     let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
- 
-    if (schedules.length === 0) { 
+    if (schedules.length === 0 && !isWeekend(selectedDate)) { 
       // Não existe agendamento para esta data, criar um novo
       await schedulesCollection.updateOne( 
         { date: selectedDate }, 
@@ -95,24 +71,6 @@ export async function GET(req: Request) {
         { upsert: true } 
       ); 
       schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
-    } else {
-      // Verificar se os slots existentes têm a propriedade "time"
-      const hasInvalidTimeSlots = schedules.some(schedule => 
-        schedule.timeSlots.some((slot: TimeSlot) => !slot.time)
-      );
-      
-      // Se encontrou slots sem propriedade "time", recria os slots
-      if (hasInvalidTimeSlots) {
-        await Promise.all(schedules.map(schedule => 
-          schedulesCollection.updateOne(
-            { date: schedule.date },
-            { $set: { timeSlots: createDefaultTimeSlots() } }
-          )
-        ));
-        
-        // Busca os dados atualizados
-        schedules = await schedulesCollection.find({ date: selectedDate }).toArray();
-      }
     }
     
     // Calcula a data/hora de 30 minutos no futuro
