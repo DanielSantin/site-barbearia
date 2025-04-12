@@ -100,7 +100,6 @@ const ScheduleApp = () => {
     return isPartOfConsecutiveGroup(index, selectedOption, consecutiveGroups);
   };
 
-  console.log(session)
 
   return (
     <div className="bg-linear-to-b from-gray-900 to-black min-h-screen">

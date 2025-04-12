@@ -205,7 +205,6 @@ export default function AdminPage() {
   };
 
   const handleDateChange = (date: string) => {
-    console.log(date);
     setSelectedDate(date);
     fetchSchedules(date);
   };

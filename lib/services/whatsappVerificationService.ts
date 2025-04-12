@@ -41,7 +41,6 @@ export class WhatsappVerificationService {
       whatsappVerified: true
     })
 
-    console.log(user)
     if (user) {
       return false
     } else {
@@ -132,7 +131,6 @@ export class WhatsappVerificationService {
         { $set: { whatsappPhone: phoneNumber, whatsappVerified: true } }
       );
       
-      console.log(response)
 
       return true;
     } catch (error) {

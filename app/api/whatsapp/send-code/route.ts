@@ -79,8 +79,6 @@ export async function POST(request: Request) {
 
     // Atualiza o tempo do último envio
     rateLimitMap.set(userId, Date.now());
-
-    console.log("SMS enviado com sucesso via Infobip");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Erro ao enviar código de verificação via SMS:', error);

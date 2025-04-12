@@ -54,7 +54,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro ao reenviar SMS via Infobip' }, { status: 500 });
     }
 
-    console.log("Código reenviado com sucesso via Infobip");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Erro ao reenviar código de verificação:', error);

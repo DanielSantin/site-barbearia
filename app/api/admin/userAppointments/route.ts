@@ -86,7 +86,6 @@ export async function GET(req: Request) {
       };
     });
 
-    console.log(processedSchedules);
     return NextResponse.json(processedSchedules);
     
   } catch (error) {
