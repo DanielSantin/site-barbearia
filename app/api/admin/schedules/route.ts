@@ -17,11 +17,6 @@ interface TimeSlot {
   tooSoon?: boolean;
 }
 
-interface Schedule {
-  _id: any;
-  date: string;
-  timeSlots: TimeSlot[];
-}
 
 // Busca os horários disponíveis para os próximos 5 dias
 export async function GET(req: Request) { 
@@ -59,8 +54,6 @@ export async function GET(req: Request) {
     if (!selectedDate) { 
       return NextResponse.json({ error: "Data não fornecida" }, { status: 400 }); 
     } 
-
-
 
     let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
     if (schedules.length === 0 && !isWeekend(selectedDate)) { 

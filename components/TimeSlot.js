@@ -6,7 +6,6 @@ import { Icon } from 'lucide-react';
 
 const TimeSlot = ({ 
   slot, 
-  index, 
   isPast,
   isUserSlot,
   isConsecutiveStart,
@@ -66,7 +65,7 @@ const TimeSlot = ({
         ) : !slot.booked ? (
           showReservationButton ? (
             <button
-              onClick={() => onReserve(index)}
+              onClick={() => onReserve(slot.index)}
               className={`px-3 py-1 text-sm rounded-full w-full flex items-center justify-center ${
                 isConsecutiveStart 
                   ? "bg-blue-900 text-white hover:bg-indigo-950" 
@@ -84,7 +83,7 @@ const TimeSlot = ({
           )
         ) : isUserSlot ? (
           <button
-            onClick={() => onCancel(index)}
+            onClick={() => onCancel(slot.index)}
             className="px-3 py-1 bg-red-600 text-white text-sm rounded-full w-full hover:bg-red-700 flex items-center justify-center transition-colors duration-200"
             disabled={isLoading}
           >

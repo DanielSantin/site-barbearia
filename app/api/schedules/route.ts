@@ -2,35 +2,15 @@ import clientPromise from "../../../lib/utils/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
-const { ObjectId } = require("mongodb");
 
 import { TimeSlot } from "@/models/types";
 import { logUserAction } from '@/lib/services/logService';
+import { isWeekend, createDefaultTimeSlots } from "@/lib/utils/dateUtils"
+const { ObjectId } = require("mongodb");
 
 // Variável de ambiente para controlar restrição de admin
 // Precisa ser definida como "true" no ambiente de desenvolvimento
 const DEV_MODE = process.env.DEV_MODE === "true";
-
-// Função para criar horários padrão entre 13:00 e 18:00
-const createDefaultTimeSlots = () => {
-  const timeSlots = [];
-  for (let hour = 10; hour <= 11; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
-    }
-  }
-  for (let hour = 13; hour <= 19; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      timeSlots.push({ time: `${hour}:${minute === 0 ? "00" : "30"}`, userId: null });
-    }
-  }
-  return timeSlots;
-};
-
-const isWeekend = (date: string | number | Date) => {
-  const dayOfWeek = new Date(date).getDay();
-  return dayOfWeek === 5 || dayOfWeek === 6; // 0 = Domingo, 6 = Sábado
-};
 
 function isTimeSlotPassed(date: string, timeSlot: any): boolean {
   // Verificar se o slot e o horário existem
@@ -126,13 +106,22 @@ export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
     const { searchParams } = new URL(req.url); 
     const selectedDate = searchParams.get("date"); 
-
+    const showAllSlots = searchParams.get("showAll") === "true"; // Parâmetro para mostrar todos os slots, inclusive desabilitados
+    
+    // Verificar se o usuário está logado
     if (session) {
       const userId = session.user?._id;
       const userCollection = dbAuth.collection("users");
       const user = await userCollection.findOne({ _id: new ObjectId(userId) });
+      
+      // Verificar se o usuário está banido
       if (user?.isBanned == true){
-        return NextResponse.json({ error: "Erro ao buscar horáros. Usuário banido temporariamente." }, { status: 401 });
+        return NextResponse.json({ error: "Erro ao buscar horários. Usuário banido temporariamente." }, { status: 401 });
+      }
+      
+      // Verificar se o usuário é admin para o parâmetro showAll
+      if (showAllSlots && !user?.isAdmin) {
+        return NextResponse.json({ error: "Apenas administradores podem visualizar todos os horários" }, { status: 403 });
       }
     } else {
       return NextResponse.json({ error: "Você precisa estar logado para ver as reservas" }, { status: 400 }); 
@@ -142,17 +131,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Data não fornecida" }, { status: 400 }); 
     } 
 
-    if (isWeekend(selectedDate)) {
-      return NextResponse.json([]); 
-    }
-
- 
+    // Verificar se é fim de semana para criação de slots
+    const isWeekendDay = isWeekend(selectedDate);
+    
     let schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
-    if (schedules.length === 0 && !isWeekend(selectedDate)) { 
-      // Não existe agendamento para esta data, criar um novo
+    
+    // Se não existir agendamento para esta data, criar um novo com todos os horários
+    if (schedules.length === 0) { 
       await schedulesCollection.updateOne( 
         { date: selectedDate }, 
-        { $set: { date: selectedDate, timeSlots: createDefaultTimeSlots() } }, 
+        { $set: { date: selectedDate, timeSlots: createDefaultTimeSlots(isWeekendDay) } }, 
         { upsert: true } 
       ); 
       schedules = await schedulesCollection.find({ date: selectedDate }).toArray(); 
@@ -161,11 +149,13 @@ export async function GET(req: Request) {
     // Calcula a data/hora de 30 minutos no futuro
     const now = (new Date()).getTime()
     const thirtyMinutesFromNow = new Date(now + 30 * 60 * 1000).getTime();
+    
     // Marcar horários passados e com menos de 30 minutos de antecedência como indisponíveis
     schedules = schedules.map(schedule => {
       const updatedTimeSlots = schedule.timeSlots.map((slot: TimeSlot) => {
         // Criar um objeto Date para o horário do slot
         const slotDateTime = new Date(`${selectedDate}T${slot.time}`).getTime();
+        
         if (slotDateTime < thirtyMinutesFromNow) {
           return {
             ...slot,
@@ -179,11 +169,13 @@ export async function GET(req: Request) {
       
       return {
         ...schedule,
-        timeSlots: updatedTimeSlots
+        timeSlots: showAllSlots 
+          ? updatedTimeSlots // Retorna todos os slots para admins
+          : updatedTimeSlots.filter((slot: TimeSlot) => slot.enabled) // Filtra slots desabilitados para usuários normais
       };
     });
     
-    // Retorna os schedules com os horários indisponíveis (passados ou muito próximos)
+    // Retorna os schedules filtrados ou não, dependendo do showAll
     return NextResponse.json(schedules); 
   } catch (error) { 
     console.error("Erro na API GET schedules:", error); 

@@ -45,7 +45,11 @@ export async function POST(req: Request) {
     // Atualizar o status de banimento do usuário
     await userCollection.updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { isBanned: isBanned } }
+      { $set: { 
+        isBanned: isBanned,
+        strikes: 0
+       } }
+      
     );
     
     return NextResponse.json({ 

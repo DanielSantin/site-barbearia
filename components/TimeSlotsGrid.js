@@ -23,7 +23,6 @@ const TimeSlotsGrid = ({
           <TimeSlot
             key={index}
             slot={slot}
-            index={index}
             isPast={isPast}
             isUserSlot={isUserReservation(slot)}
             isConsecutiveStart={isConsecutiveStart}

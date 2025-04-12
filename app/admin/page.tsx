@@ -48,6 +48,29 @@ export default function AdminPage() {
     endDate: ""
   });
 
+
+  const enableTimeSlot = async (date: string, timeSlotIndex: number) => {
+    try {
+  
+      const response = await fetch("/api/admin/enableSlot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: date,
+          timeSlotIndex,
+        }),
+      })
+
+      await fetchSchedules(selectedDate); 
+
+    } catch (error) {
+      console.error('Erro ao ativar horário:', error);
+      toast.error('Não foi possível ativar o horário. Tente novamente.');
+    }
+  };
+  
   const fetchLogs = async (page = 1, filters = logFilters) => {
     try {
       setIsLoadingLogs(true);
@@ -479,6 +502,7 @@ export default function AdminPage() {
           blockTimeSlot={blockTimeSlot}
           unblockTimeSlot={unblockTimeSlot}
           removeClientReservation={removeClientReservation}
+          enableTimeSlot={enableTimeSlot}
         />
       </div>
 

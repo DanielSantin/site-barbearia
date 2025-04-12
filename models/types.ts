@@ -8,12 +8,14 @@ export type TimeSlot = {
     bookedAt?: string | null;
     canceledAt?: string | null;
     isPast?: boolean;
+    enabled?: boolean;
   };
   
 export type Schedule = {
     _id: string;
     date: string;
     timeSlots: TimeSlot[];
+    
 };
 
 export type User = {

@@ -33,6 +33,7 @@ type AdminViewSelectorProps = {
   blockTimeSlot: (date: string, timeSlotIndex: number) => void;
   unblockTimeSlot: (date: string, timeSlotIndex: number) => void;
   removeClientReservation: (date: string, timeSlotIndex: number) => void;
+  enableTimeSlot: (date: string, timeSlotIndex: number) => void;
 };
 
 const AdminViewSelector: React.FC<AdminViewSelectorProps> = ({
@@ -62,6 +63,7 @@ const AdminViewSelector: React.FC<AdminViewSelectorProps> = ({
   blockTimeSlot,
   unblockTimeSlot,
   removeClientReservation,
+  enableTimeSlot,
 }) => {
   switch (view) {
     case 'schedules':
@@ -79,6 +81,7 @@ const AdminViewSelector: React.FC<AdminViewSelectorProps> = ({
             blockTimeSlot={blockTimeSlot}
             unblockTimeSlot={unblockTimeSlot}
             removeClientReservation={removeClientReservation}
+            enableTimeSlot={enableTimeSlot}
           />
         </>
       );
