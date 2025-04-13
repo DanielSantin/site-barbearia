@@ -17,7 +17,7 @@ const CancelDialog = ({ onClose, onConfirm, fee }) => {
           <div className="p-4 border border-gray-700 rounded-lg bg-gray-900">
             <h3 className="font-medium text-gray-300 mb-2">Opção 1: Pagar taxa de cancelamento</h3>
             <p className="text-gray-400 text-sm">
-              Pague R$ {fee.toFixed(2).replace('.', ',')} de taxa de cancelamento via PIX.
+              Pague R$ {Number(fee).toFixed(2).replace('.', ',')} de taxa de cancelamento via PIX.
               Seu histórico permanece limpo.
             </p>
           </div>

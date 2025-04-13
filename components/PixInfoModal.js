@@ -26,14 +26,14 @@ const PixInfoModal = ({ onClose, pixKey, fee, onCopy }) => {
             <span className="font-medium">Informações para pagamento</span>
           </div>
           <p className="text-gray-300 text-sm">
-            Realize um PIX de R$ {fee.toFixed(2).replace('.', ',')} para a chave abaixo.
+            Realize um PIX de R$ {Number(fee).toFixed(2).replace('.', ',')} para a chave abaixo.
             Após o pagamento, seu cancelamento será processado sem penalidades.
           </p>
         </div>
         
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-300 mb-1">
-            Chave PIX (CPF)
+            Chave PIX (Telefone)
           </label>
           <div className="flex">
             <input
