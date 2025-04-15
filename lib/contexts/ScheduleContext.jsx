@@ -13,7 +13,6 @@ export const ScheduleProvider = ({ children }) => {
   const {
     selectedDate,
     availableSlots,
-    consecutiveGroups,
     isLoading,
     firstLoading,
     errorMessage,
@@ -64,7 +63,6 @@ export const ScheduleProvider = ({ children }) => {
         selectedOption,
         selectedDate,
         availableSlots,
-        consecutiveGroups,
         isLoading: isLoading || reservationLoading,
         firstLoading,
         errorMessage,
@@ -81,7 +79,7 @@ export const ScheduleProvider = ({ children }) => {
         handleOptionChange,
         handleDateChange,
         handleReservation: (timeSlotIndex) => 
-          handleReservation(timeSlotIndex, selectedOption, consecutiveGroups),
+          handleReservation(timeSlotIndex, selectedOption, availableSlots),
         handleCancelReservation: (timeSlotIndex) => 
           handleCancelReservation(timeSlotIndex, availableSlots),
         confirmLateCancelation: confirmCancel,

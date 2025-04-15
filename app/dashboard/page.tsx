@@ -65,7 +65,6 @@ const ScheduleApp = () => {
     selectedOption,
     selectedDate,
     availableSlots,
-    consecutiveGroups,
     isLoading,
     firstLoading,
     showCancelDialog,
@@ -97,7 +96,7 @@ const ScheduleApp = () => {
 
   // Função para verificar se o slot faz parte de um grupo consecutivo
   const checkIsPartOfConsecutiveGroup = (index: number) => {
-    return isPartOfConsecutiveGroup(index, selectedOption, consecutiveGroups);
+    return isPartOfConsecutiveGroup(index, selectedOption, availableSlots);
   };
 
 
@@ -154,7 +153,6 @@ const ScheduleApp = () => {
             <TimeSlotsGrid 
               slots={availableSlots}
               selectedOption={selectedOption}
-              consecutiveGroups={consecutiveGroups}
               isUserReservation={checkIsUserReservation}
               isPartOfConsecutiveGroup={checkIsPartOfConsecutiveGroup}
               handleReservation={handleReservation}

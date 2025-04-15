@@ -4,7 +4,6 @@ import TimeSlot from './TimeSlot';
 const TimeSlotsGrid = ({ 
   slots, 
   selectedOption, 
-  consecutiveGroups,
   isUserReservation,
   isPartOfConsecutiveGroup,
   handleReservation,
@@ -15,9 +14,9 @@ const TimeSlotsGrid = ({
     <div className="grid grid-cols-3 gap-3 mb-6">
       {slots.map((slot, index) => {
         const isPast = slot.isPast;
-        const isAvailableForSelectedService = isPartOfConsecutiveGroup(index);
+        const isAvailableForSelectedService = isPartOfConsecutiveGroup(slot.index);
         const showReservationButton = selectedOption !== "Cabelo e Barba" || isAvailableForSelectedService;
-        const isConsecutiveStart = selectedOption === "Cabelo e Barba" && consecutiveGroups.some(g => g[0] === index);
+        const isConsecutiveStart = selectedOption === "Cabelo e Barba";
         
         return (
           <TimeSlot
