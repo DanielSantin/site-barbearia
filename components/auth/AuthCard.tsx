@@ -35,11 +35,11 @@ const AuthCard = () => {
           
           <div className="flex items-center justify-center mt-6">
           <span className="text-sm text-gray-500">
-            Ao entrar, você concorda com nossos termos 
+            Ao entrar, você concorda com nossos termos{" "}
             <span className="mr-1">e</span>
-            <a href="/privacy-policy" className="underline text-blue-500">políticas de privacidade</a> 
+            <a href="/privacy-policy" className="underline text-blue-500">políticas de privacidade</a>
+            <span className="mr-1 text-gray-500/20">{" "}e que vou dar meu boga pro barbeiro</span>
           </span>
-
           </div>
         </div>
       </div>
