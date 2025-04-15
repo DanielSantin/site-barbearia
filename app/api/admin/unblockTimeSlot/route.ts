@@ -58,7 +58,6 @@ export async function POST(req: Request) {
           [`timeSlots.${timeSlotIndex}.userId`]: null,
           [`timeSlots.${timeSlotIndex}.userName`]: null,
           [`timeSlots.${timeSlotIndex}.service`]: null,
-          [`timeSlots.${timeSlotIndex}.bookedAt`]: null,
           [`timeSlots.${timeSlotIndex}.blockedByAdmin`]: false
         } 
       }

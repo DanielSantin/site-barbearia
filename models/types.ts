@@ -5,8 +5,6 @@ export type TimeSlot = {
     userName?: string | null;
     booked?: boolean;
     service?: string | null;
-    bookedAt?: string | null;
-    canceledAt?: string | null;
     isPast?: boolean;
     enabled?: boolean;
   };

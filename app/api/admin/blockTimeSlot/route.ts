@@ -55,7 +55,6 @@ export async function POST(req: Request) {
           [`timeSlots.${timeSlotIndex}.userId`]: null, // Indica que foi bloqueado pelo admin
           [`timeSlots.${timeSlotIndex}.userName`]: "Admin",
           [`timeSlots.${timeSlotIndex}.service`]: service || "Bloqueado",
-          [`timeSlots.${timeSlotIndex}.bookedAt`]: new Date().toISOString(),
           [`timeSlots.${timeSlotIndex}.blockedByAdmin`]: true
         } 
       }

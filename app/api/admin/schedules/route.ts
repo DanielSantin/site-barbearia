@@ -11,8 +11,6 @@ interface TimeSlot {
   booked?: boolean;
   userName?: string | null;
   service?: string | null;
-  bookedAt?: string | null;
-  canceledAt?: Date | null;
   isPast?: boolean;
   tooSoon?: boolean;
 }
@@ -174,8 +172,6 @@ export async function DELETE(req: Request) {
           [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
           [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
           [`timeSlots.${timeSlotIndexNumber}.service`]: null,
-          [`timeSlots.${timeSlotIndexNumber}.bookedAt`]: null,
-          [`timeSlots.${timeSlotIndexNumber}.canceledAt`]: new Date()
         } 
       }
     );

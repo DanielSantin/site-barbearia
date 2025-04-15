@@ -282,7 +282,6 @@ export async function POST(req: Request) {
       userId: session.user._id,
       userName: session.user.name || "Usuário",
       service: service || "Não especificado",
-      bookedAt: new Date().toISOString()
     };
         
     // Atualizar no banco de dados
@@ -409,8 +408,6 @@ export async function DELETE(req: Request) {
           [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
           [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
           [`timeSlots.${timeSlotIndexNumber}.service`]: null,
-          [`timeSlots.${timeSlotIndexNumber}.bookedAt`]: null,
-          [`timeSlots.${timeSlotIndexNumber}.canceledAt`]: new Date()
         } 
       }
     );

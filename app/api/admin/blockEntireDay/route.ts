@@ -78,7 +78,6 @@ export async function POST(req: Request) {
         userId: null,
         userName: "Admin",
         service: service || "Bloqueado",
-        bookedAt: new Date().toISOString(),
         blockedByAdmin: true
       };
     });
