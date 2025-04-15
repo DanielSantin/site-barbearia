@@ -377,7 +377,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
 
         {/* Tabela para desktop - Slots Inativos */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full bg-gray-700 text-gray-200 border-gray-600 opacity-60">
+          <table className="min-w-full bg-gray-700 text-gray-200 border-gray-600">
             <thead>
               <tr className="bg-gray-800 border-b border-gray-600">
                 <th className="py-2 px-4 text-left">Horário</th>

@@ -51,7 +51,6 @@ export default function AdminPage() {
 
   const enableTimeSlot = async (date: string, timeSlotIndex: number) => {
     try {
-  
       const response = await fetch("/api/admin/enableSlot", {
         method: "POST",
         headers: {
@@ -64,6 +63,7 @@ export default function AdminPage() {
       })
 
       await fetchSchedules(selectedDate); 
+      toast.success("Horário ativado com sucesso")
 
     } catch (error) {
       console.error('Erro ao ativar horário:', error);
