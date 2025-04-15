@@ -18,7 +18,7 @@ type SchedulesManagementProps = {
   blockTimeSlot: (date: string, timeSlotIndex: number) => void;
   unblockTimeSlot: (date: string, timeSlotIndex: number) => void;
   removeClientReservation: (date: string, timeSlotIndex: number) => void;
-  enableTimeSlot: (date: string, timeSlotIndex: number) => void; // Nova prop para habilitar time slot
+  enableTimeSlot: (date: string, timeSlotIndex: number) => void;
 };
 
 const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
@@ -45,6 +45,13 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
 
     return () => clearInterval(timer);
   }, []);
+
+  // Função para obter o nome do cliente a partir do ID
+  const getUserNameById = (userId?: string | null) => {
+    if (!userId) return null;
+    const user = users.find(u => u._id === userId);
+    return user ? user.name || user.username || "Cliente sem nome" : null;
+  };
 
   const getServiceIcon = (service?: string | null) => {
     switch(service) {
@@ -82,6 +89,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
 
     const isCurrentTimeSlot = getCurrentTimePosition(schedules[0]?.timeSlots.filter(s => s.enabled !== false) || []) === index;
     const user = users.find(u => u._id === slot.userId);
+    const clientName = getUserNameById(slot.userId);
 
     return (
       <div 
@@ -97,9 +105,9 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
             <span>
               {slot.time}
             </span>
-            {slot.userName && (
+            {clientName && (
               <span className={`truncate max-w-[150px] ${user ? getTextColorByRole(user.accountRole) : 'default-class'}`}>
-                {slot.userName}
+                {clientName}
               </span>
             )}
           </div>
@@ -130,7 +138,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
               <div className="flex justify-between">
                 <span className="text-gray-300">Cliente:</span>
                 <span className="text-gray-100">
-                  {slot.userName ? (
+                  {clientName ? (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -139,7 +147,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       }}
                       className="text-blue-400 hover:underline"
                     >
-                      {slot.userName}
+                      {clientName}
                     </button>
                   ) : '-'}
                 </span>
@@ -276,6 +284,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                   .filter(slot => slot.enabled !== false)
                   .map((slot, index) => {
                     const originalIndex = schedules[0]?.timeSlots.findIndex(s => s.time === slot.time);
+                    const clientName = getUserNameById(slot.userId);
                     return (
                       <tr key={originalIndex} className="border-t border-gray-600 hover:bg-gray-600">
                         <td className="py-2 px-4">{slot.time}</td>
@@ -291,7 +300,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                           )}
                         </td>
                         <td className="py-2 px-4">
-                          {slot.userName ? (
+                          {clientName ? (
                             <button
                               onClick={() => {
                                 const user = users.find(u => u._id === slot.userId);
@@ -299,7 +308,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                               }}
                               className="text-blue-400 hover:underline cursor-pointer"
                             >
-                              {slot.userName}
+                              {clientName}
                             </button>
                           ) : (
                             "-"
@@ -393,6 +402,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                   .filter(slot => slot.enabled === false)
                   .map((slot, index) => {
                     const originalIndex = schedules[0]?.timeSlots.findIndex(s => s.time === slot.time);
+                    const clientName = getUserNameById(slot.userId);
                     return (
                       <tr key={originalIndex} className="border-t border-gray-600 hover:bg-gray-600">
                         <td className="py-2 px-4">{slot.time}</td>
@@ -400,7 +410,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                           <span className="text-yellow-400">Desativado</span>
                         </td>
                         <td className="py-2 px-4">
-                          {slot.userName ? (
+                          {clientName ? (
                             <button
                               onClick={() => {
                                 const user = users.find(u => u._id === slot.userId);
@@ -408,7 +418,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                               }}
                               className="text-blue-400 hover:underline cursor-pointer"
                             >
-                              {slot.userName}
+                              {clientName}
                             </button>
                           ) : (
                             "-"
@@ -428,7 +438,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       </tr>
                     );
                   })
-              ) : (
+              ) : ( 
                 <tr>
                   <td colSpan={5} className="py-4 text-center text-gray-400 italic">
                     Nenhum horário desativado encontrado para esta data.

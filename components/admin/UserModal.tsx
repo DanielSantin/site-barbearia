@@ -148,7 +148,7 @@ const UserModal: React.FC<UserModalProps> = ({
                                     <tbody>
                                         {userAppointments.map((appointment, index) => (
                                             appointment.timeSlots.map((timeSlot: TimeSlot) => (
-                                                <tr key={index} className="hover:bg-gray-600">
+                                                    <tr key={`${index}-${timeSlot.time}`} className="hover:bg-gray-600">
                                                     <td className="py-2 px-4 border border-gray-600 text-gray-200">{formatDateFull(appointment.date)}</td>
                                                     <td className="py-2 px-4 border border-gray-600 text-gray-200">{timeSlot.time}</td>
                                                     <td className="py-2 px-4 border border-gray-600 text-gray-200">{timeSlot.service || "Não especificado"}</td>

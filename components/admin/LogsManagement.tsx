@@ -62,9 +62,17 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
            `${log.userId || ''}-${log.actionType || ''}-${log.timestamp || ''}-${index}`;
   };
 
+  const getUserNameById = (userId?: string | null) => {
+    if (!userId) return null;
+    const user = users.find(u => u._id === userId);
+    return user ? user.name || user.username || "Cliente sem nome" : null;
+  };
+
+
   const renderMobileLogCard = (log: LogEntry, index: number) => {
     const logKey = getLogKey(log, index);
     const isExpanded = expandedLog === logKey;
+    const userName = getUserNameById(log.userId);
     
     const actionTypeLabel = {
       'reservation': 'Reserva',
@@ -72,7 +80,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
       'login': 'Login',
       'register': 'Registro'
     }[log.actionType] || log.actionType;
-
+  
     return (
       <div 
         key={logKey} 
@@ -84,7 +92,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
         <div className="p-4 flex justify-between items-center font-semibold text-gray-100">
           <div className="flex items-center space-x-2">
             <span className="text-sm">
-              {new Date(log.timestamp).toLocaleString('pt-BR').split(' ')[0]} {log.userName || '-'}
+              {new Date(log.timestamp).toLocaleString('pt-BR').split(' ')[0]} {userName || '-'}
             </span>
           </div>
           <svg 
@@ -108,11 +116,11 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   {new Date(log.timestamp).toLocaleString('pt-BR')}
                 </span>
               </div>
-
+  
               <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Usuário:</span>
                 <span className="text-gray-100 font-medium">
-                  {log.userName ? (
+                  {userName ? (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -121,7 +129,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                       }}
                       className="text-blue-400 hover:underline"
                     >
-                      {log.userName}
+                      {userName}
                     </button>
                   ) : '-'}
                 </span>
@@ -133,14 +141,14 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   {log.additionalInfo || '-'}
                 </span>
               </div>
-
+  
               <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Tipo de Ação:</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActionTypeClass(log.actionType)}`}>
                   {actionTypeLabel}
                 </span>
               </div>
-
+  
               <div className="bg-gray-700 rounded-sm p-3">
                 <span className="block text-xs text-gray-300 mb-1">Importância:</span>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium 
@@ -372,43 +380,46 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log, index) => (
-                    <tr key={getLogKey(log, index)} className="border-t hover:bg-gray-800">
-                      <td className="py-2 px-4 text-sm">
-                        {new Date(log.timestamp).toLocaleString('pt-BR')}
-                      </td>
-                      <td className="py-2 px-4 text-sm">
-                        {log.userName ? (
-                          <button
-                            onClick={() => {
-                              const user = users.find(u => u._id === log.userId);
-                              if (user) handleUserClick(user);
-                            }}
-                            className="text-blue-400 hover:underline cursor-pointer"
-                          >
-                            {log.userName}
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="py-2 px-4 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActionTypeClass(log.actionType)}`}>
-                          {log.actionType === 'reservation' ? 'Reserva' : 
-                           log.actionType === 'cancellation' ? 'Cancelamento' :
-                           log.actionType === 'login' ? 'Login' :
-                           log.actionType === 'register' ? 'Registro' : log.actionType}
-                        </span>
-                      </td>
-                      <td className="py-2 px-4 text-sm">{log.additionalInfo}</td>
-                      <td className="py-2 px-4 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                          ${log.importance === 'important' ? 'bg-yellow-100/90 text-yellow-800' : 'bg-gray-100/90 text-gray-800'}`}>
-                          {log.importance === 'important' ? 'Importante' : 'Normal'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {logs.map((log, index) => {
+                    const userName = getUserNameById(log.userId);
+                    return (
+                      <tr key={getLogKey(log, index)} className="border-t hover:bg-gray-800">
+                        <td className="py-2 px-4 text-sm">
+                          {new Date(log.timestamp).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-2 px-4 text-sm">
+                          {userName ? (
+                            <button
+                              onClick={() => {
+                                const user = users.find(u => u._id === log.userId);
+                                if (user) handleUserClick(user);
+                              }}
+                              className="text-blue-400 hover:underline cursor-pointer"
+                            >
+                              {userName}
+                            </button>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="py-2 px-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActionTypeClass(log.actionType)}`}>
+                            {log.actionType === 'reservation' ? 'Reserva' : 
+                            log.actionType === 'cancellation' ? 'Cancelamento' :
+                            log.actionType === 'login' ? 'Login' :
+                            log.actionType === 'register' ? 'Registro' : log.actionType}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-sm">{log.additionalInfo}</td>
+                        <td className="py-2 px-4 text-sm">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium 
+                            ${log.importance === 'important' ? 'bg-yellow-100/90 text-yellow-800' : 'bg-gray-100/90 text-gray-800'}`}>
+                            {log.importance === 'important' ? 'Importante' : 'Normal'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
