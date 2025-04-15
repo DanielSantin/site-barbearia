@@ -59,7 +59,7 @@ export default function BugReportButton() {
 
       {/* Overlay do modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           {/* Modal */}
           <div className="bg-gray-800 rounded-xl shadow-lg w-full max-w-md border border-gray-700 transition-all duration-200">
             {/* Cabeçalho */}
