@@ -56,8 +56,15 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
     }
   };
 
-  const renderMobileLogCard = (log: LogEntry) => {
-    const isExpanded = expandedLog === log._id;
+  // Função para gerar um ID único para cada log (se _id não estiver disponível)
+  const getLogKey = (log: LogEntry, index: number) => {
+    return log._id || 
+           `${log.userId || ''}-${log.actionType || ''}-${log.timestamp || ''}-${index}`;
+  };
+
+  const renderMobileLogCard = (log: LogEntry, index: number) => {
+    const logKey = getLogKey(log, index);
+    const isExpanded = expandedLog === logKey;
     
     const actionTypeLabel = {
       'reservation': 'Reserva',
@@ -68,11 +75,11 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
 
     return (
       <div 
-        key={log._id} 
+        key={logKey} 
         className={`rounded-lg mb-4 overflow-hidden ${
           log.importance === 'important' ? 'bg-yellow-500/30' : 'bg-gray-500/30'
         } ${getActionTypeColor(log.actionType)}`}
-        onClick={() => setExpandedLog(isExpanded ? null : log._id)}
+        onClick={() => setExpandedLog(isExpanded ? null : logKey)}
       >
         <div className="p-4 flex justify-between items-center font-semibold text-gray-100">
           <div className="flex items-center space-x-2">
@@ -349,7 +356,7 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
           <>
             {/* Mobile Log Cards */}
             <div className="block md:hidden">
-              {logs.map(renderMobileLogCard)}
+              {logs.map((log, index) => renderMobileLogCard(log, index))}
             </div>
 
             {/* Desktop Log Table */}
@@ -365,8 +372,8 @@ const LogsManagement: React.FC<LogsManagementProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
-                    <tr key={log._id} className="border-t hover:bg-gray-800">
+                  {logs.map((log, index) => (
+                    <tr key={getLogKey(log, index)} className="border-t hover:bg-gray-800">
                       <td className="py-2 px-4 text-sm">
                         {new Date(log.timestamp).toLocaleString('pt-BR')}
                       </td>

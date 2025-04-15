@@ -1,8 +1,17 @@
-import clientPromise from "@/lib/utils/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/utils/auth";
+import { 
+  getAllLogs, 
+  countLogs, 
+  getLogsSummary, 
+  deleteLogs,
+  LogFilter 
+} from "@/lib/services/logService";
+
+
 const { ObjectId } = require("mongodb");
+import clientPromise from "@/lib/utils/db";
 
 // API para buscar logs de ações dos usuários (apenas para admins)
 export async function GET(req: Request) {
@@ -14,7 +23,6 @@ export async function GET(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db();
     const dbAuth = client.db("auth");
 
     // Verificar se é admin
@@ -37,7 +45,7 @@ export async function GET(req: Request) {
     const endDate = searchParams.get("endDate");
     
     // Construir o filtro baseado nos parâmetros
-    const filter: any = {};
+    const filter: LogFilter = {};
     
     if (importance) {
       filter.importance = importance;
@@ -66,40 +74,17 @@ export async function GET(req: Request) {
       }
     }
 
-    const logsCollection = db.collection("userActionLogs");
+    // Calcular skip baseado na página
+    const skip = (page - 1) * limit;
+    
+    // Buscar logs com paginação usando a nova função do serviço local
+    const logs = await getAllLogs(limit, skip, filter);
     
     // Contar total de registros para paginação
-    const totalLogs = await logsCollection.countDocuments(filter);
+    const totalLogs = await countLogs(filter);
     
-    // Buscar logs com paginação e ordenação por data (mais recentes primeiro)
-    const logs = await logsCollection
-      .find(filter)
-      .sort({ timestamp: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .toArray();
-    
-    // Buscar dados de resumo
-    const summary = {
-      totalLogs: totalLogs,
-      totalPages: Math.ceil(totalLogs / limit),
-      currentPage: page,
-      
-      // Total de logs importantes
-      importantLogs: await logsCollection.countDocuments({ importance: "important" }),
-      
-      // Contagem por tipo de ação
-      actionCounts: {
-        reservations: await logsCollection.countDocuments({ actionType: "reservation" }),
-        cancellations: await logsCollection.countDocuments({ actionType: "cancellation" })
-      },
-      
-      // Contagem de cancelamentos importantes (menos de 30 min)
-      importantCancellations: await logsCollection.countDocuments({ 
-        actionType: "cancellation", 
-        importance: "important" 
-      })
-    };
+    // Buscar dados de resumo usando a nova função
+    const summary = await getLogsSummary();
     
     return NextResponse.json({
       logs,
@@ -128,7 +113,6 @@ export async function DELETE(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db();
     const dbAuth = client.db("auth");
 
     // Verificar se é admin
@@ -143,7 +127,7 @@ export async function DELETE(req: Request) {
     // Extrair parâmetros
     const { olderThan, importance, actionType } = await req.json();
     
-    const filter: any = {};
+    const filter: LogFilter = {};
     
     // Filtro por data - logs mais antigos que X dias
     if (olderThan && typeof olderThan === 'number') {
@@ -168,18 +152,13 @@ export async function DELETE(req: Request) {
       }, { status: 400 });
     }
     
-    const logsCollection = db.collection("userActionLogs");
-    
-    // Contar quantos logs serão afetados
-    const count = await logsCollection.countDocuments(filter);
-    
-    // Executar a deleção
-    const result = await logsCollection.deleteMany(filter);
+    // Executar a deleção usando a função do serviço local
+    const deletedCount = await deleteLogs(filter);
     
     return NextResponse.json({
       success: true,
-      deletedCount: result.deletedCount,
-      message: `${result.deletedCount} logs foram excluídos com sucesso.`
+      deletedCount,
+      message: `${deletedCount} logs foram excluídos com sucesso.`
     });
     
   } catch (error) {
