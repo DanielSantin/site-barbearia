@@ -262,7 +262,10 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
           ) : (
             schedules[0]?.timeSlots
               .filter(slot => slot.enabled !== false)
-              .map((slot, index) => renderMobileCard(slot, index, true))
+              .map((slot, index) => {
+                const originalIndex = schedules[0]?.timeSlots.findIndex(s => s.time === slot.time);
+                return (renderMobileCard(slot, originalIndex, true))
+              })
           )}
         </div>
 
