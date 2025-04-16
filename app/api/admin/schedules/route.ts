@@ -9,7 +9,6 @@ interface TimeSlot {
   time: string;
   userId: string | null;
   booked?: boolean;
-  userName?: string | null;
   service?: string | null;
   isPast?: boolean;
   tooSoon?: boolean;
@@ -170,7 +169,6 @@ export async function DELETE(req: Request) {
         $set: { 
           [`timeSlots.${timeSlotIndexNumber}.booked`]: false,
           [`timeSlots.${timeSlotIndexNumber}.userId`]: null,
-          [`timeSlots.${timeSlotIndexNumber}.userName`]: null,
           [`timeSlots.${timeSlotIndexNumber}.service`]: null,
         } 
       }

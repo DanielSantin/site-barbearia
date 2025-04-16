@@ -60,6 +60,9 @@ export async function POST(req: Request) {
     
     // Bloquear todos os horários que ainda não estão reservados por clientes
     const updatedTimeSlots = schedule?.timeSlots.map((slot: any, index: number) => {
+      // Ignorar timeSlots desabilitados
+      if (slot.enabled === false) return slot;
+
       // Se já está reservado por um cliente (tem userId), manter como está
       if (slot.userId) return slot;
       
@@ -76,7 +79,6 @@ export async function POST(req: Request) {
         ...slot,
         booked: true,
         userId: null,
-        userName: "Admin",
         service: service || "Bloqueado",
         blockedByAdmin: true
       };

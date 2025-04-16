@@ -56,10 +56,11 @@ export async function POST(req: Request) {
         $set: { 
           [`timeSlots.${timeSlotIndex}.booked`]: false,
           [`timeSlots.${timeSlotIndex}.userId`]: null,
-          [`timeSlots.${timeSlotIndex}.userName`]: null,
-          [`timeSlots.${timeSlotIndex}.service`]: null,
-          [`timeSlots.${timeSlotIndex}.blockedByAdmin`]: false
-        } 
+          [`timeSlots.${timeSlotIndex}.service`]: null
+        },
+        $unset: {
+          [`timeSlots.${timeSlotIndex}.blockedByAdmin`]: ""
+        }
       }
     );
     
