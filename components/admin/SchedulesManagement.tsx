@@ -203,7 +203,7 @@ const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
                       e.stopPropagation();
                       removeClientReservation(selectedDate, index);
                     }}
-                    className="bg-red-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-red-700"
+                    className="bg-red-600 text-white px-3 py-1 rounded-sm text-sm hover:bg-red-700 " 
                   >
                     Remover Reserva
                   </button>

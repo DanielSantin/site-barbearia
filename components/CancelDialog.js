@@ -25,7 +25,7 @@ const CancelDialog = ({ onClose, onConfirm, fee }) => {
           <div className="p-4 border border-gray-700 rounded-lg bg-gray-900">
             <h3 className="font-medium text-gray-300 mb-2">Opção 2: Receber um strike</h3>
             <p className="text-gray-400 text-sm">
-              Você receberá um strike em seu histórico. Ao acumular 3 strikes,
+              Você receberá um strike em seu histórico. Ao acumular 5 strikes,
               você será temporariamente bloqueado de fazer novas reservas.
             </p>
           </div>
