@@ -26,13 +26,11 @@ export async function POST(request: Request) {
     const formattedPhone = `55${phoneNumber}`;
     const infobipApiKey = process.env.INFOBIP_API_KEY!;
     const infobipBaseUrl = process.env.INFOBIP_BASE_URL!;
-    const infobipSender = process.env.INFOBIP_SENDER_ID!;
 
     const payload = {
       messages: [
         {
           destinations: [{ to: formattedPhone }],
-          from: infobipSender,
           text: `Barbearia Universitária Barba Azul. Seu código de verificação é: ${existingCode}`
         }
       ]
