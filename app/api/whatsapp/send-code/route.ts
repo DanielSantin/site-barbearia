@@ -49,13 +49,11 @@ export async function POST(request: Request) {
 
     const infobipApiKey = process.env.INFOBIP_API_KEY!;
     const infobipBaseUrl = process.env.INFOBIP_BASE_URL!;
-    const infobipSender = process.env.INFOBIP_SENDER_ID!;
 
     const payload = {
       messages: [
         {
           destinations: [{ to: formattedPhone }],
-          from: infobipSender,
           text: `Barbaria Universitária Barba Azul. Seu código de verificação é: ${verificationCode}`
         }
       ]
