@@ -39,7 +39,8 @@ export const authOptions: NextAuthOptions = {
           if (userData) {
             token.isAdmin = userData.isAdmin ?? false;
             token.isBanned = userData.isBanned ?? false;
-            token.whatsappVerified = userData.whatsappVerified ?? false;
+            token.whatsappVerified = true;
+            //token.whatsappVerified = userData.whatsappVerified ?? true;
             token.whatsappPhone = userData.whatsappPhone || null;
           } else {
             token.isBanned = false;

@@ -55,7 +55,6 @@ export async function POST(request: Request) {
       messages: [
         {
           destinations: [{ to: formattedPhone }],
-          from: infobipSender,
           text: `Barbaria Universitária Barba Azul. Seu código de verificação é: ${verificationCode}`
         }
       ]

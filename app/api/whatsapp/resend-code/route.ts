@@ -30,10 +30,10 @@ export async function POST(request: Request) {
 
     const payload = {
       messages: [
-        {
+        { 
+          from: "InfoSMS",
           destinations: [{ to: formattedPhone }],
-          from: infobipSender,
-          text: `Barbearia Universitária Barba Azul. Seu código de verificação é: ${existingCode}`
+          text: `Barbearia Universitária Barba Azul. Seu código de verificação é: ${existingCode}.`
         }
       ]
     };
